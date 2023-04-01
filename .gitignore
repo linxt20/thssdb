@@ -1,0 +1,11 @@
+.idea/
+
+target/
+
+*.meta
+
+*.data
+
+ThssDB/data/
+
+ThssDB/out/
