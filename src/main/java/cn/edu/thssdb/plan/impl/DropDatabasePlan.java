@@ -20,22 +20,22 @@ package cn.edu.thssdb.plan.impl;
 
 import cn.edu.thssdb.plan.LogicalPlan;
 
-public class CreateDatabasePlan extends LogicalPlan {
+public class DropDatabasePlan extends LogicalPlan {
 
-  private String databaseName;
+    private String databaseName;
 
-  public CreateDatabasePlan(String databaseName) {
-    super(LogicalPlanType.CREATE_DB);
-    System.out.println("CreateDatabasePlan: [DEBUG] " + databaseName);
-    this.databaseName = databaseName;
-  }
+    public DropDatabasePlan(String databaseName) {
+        super(LogicalPlanType.DROP_DB);
+        System.out.println("DropDatabasePlan: [DEBUG] " + databaseName);
+        this.databaseName = databaseName;
+    }
 
-  public String getDatabaseName() {
-    return databaseName;
-  }
+    public String getDatabaseName() {
+        return databaseName;
+    }
 
-  @Override
-  public String toString() {
-    return "CreateDatabasePlan{" + "databaseName='" + databaseName + '\'' + '}';
-  }
+    @Override
+    public String toString() {
+        return "DropDatabasePlan{" + "databaseName='" + databaseName + '\'' + '}';
+    }
 }

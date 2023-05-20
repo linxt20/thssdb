@@ -25,4 +25,17 @@ public class Column implements Comparable<Column> {
   public String toString() {
     return name + ',' + type + ',' + primary + ',' + notNull + ',' + maxLength;
   }
+
+  public void setPrimary(int new_primary) {primary = new_primary;}
+  public int getPrimary() { return primary; }
+  public int getMaxLength() {return maxLength;}
+
+  public String getName() {
+    return this.name;
+  }
+
+  public boolean NotNull() {return this.notNull;}
+  public ColumnType getType() {
+    return this.type;
+  }
 }
