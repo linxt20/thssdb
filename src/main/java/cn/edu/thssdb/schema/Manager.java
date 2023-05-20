@@ -1,9 +1,12 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.KeyNotExistException;
+
 import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Manager {
+  private Database currentDB; // 当前正在使用的database
   private HashMap<String, Database> databases;
   private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -13,14 +16,69 @@ public class Manager {
 
   public Manager() {
     // TODO
+    this.currentDB = null;
+    this.databases = new HashMap<>();
   }
 
-  private void createDatabaseIfNotExists() {
-    // TODO
+  public Database getCurrentDB() {
+    // 返回当前正在使用的database
+    try {
+      lock.readLock().lock();
+      return currentDB;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
   }
 
-  private void deleteDatabase() {
+
+  public boolean containDatabase(String dbName) {
     // TODO
+    try {
+      lock.readLock().lock();
+      return databases.containsKey(dbName);
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+  public void createDatabaseIfNotExists(String dbName) {
+    // TODO
+    try {
+      lock.writeLock().lock();
+      if (!databases.containsKey(dbName))
+        databases.put(dbName, new Database(dbName));
+      if (currentDB == null) {
+        try {
+          lock.readLock().lock();
+          if (!databases.containsKey(dbName))
+            throw new KeyNotExistException();
+            // TODO throw new DatabaseNotExistException(dbName);
+          currentDB = databases.get(dbName);
+        }
+        finally {
+          lock.readLock().unlock();
+        }
+      }
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  public void deleteDatabase(String dbName) {
+    // TODO
+    try {
+      lock.writeLock().lock();
+      if (!databases.containsKey(dbName))
+        throw new KeyNotExistException();
+        // TODO throw new DatabaseNotExistException(dbName);
+      databases.remove(dbName);
+      // TODO 删除对应的文件夹（调用 database.dropSelf()
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
   }
 
   public void switchDatabase() {
