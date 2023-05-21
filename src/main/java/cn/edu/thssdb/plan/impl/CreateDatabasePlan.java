@@ -26,6 +26,7 @@ public class CreateDatabasePlan extends LogicalPlan {
 
   public CreateDatabasePlan(String databaseName) {
     super(LogicalPlanType.CREATE_DB);
+    System.out.println("CreateDatabasePlan: [DEBUG] " + databaseName);
     this.databaseName = databaseName;
   }
 

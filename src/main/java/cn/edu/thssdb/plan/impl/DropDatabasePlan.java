@@ -16,30 +16,26 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package cn.edu.thssdb.parser;
+package cn.edu.thssdb.plan.impl;
 
 import cn.edu.thssdb.plan.LogicalPlan;
-import cn.edu.thssdb.plan.impl.CreateDatabasePlan;
-import cn.edu.thssdb.plan.impl.DropDatabasePlan;
-import cn.edu.thssdb.plan.impl.UseDatabasePlan;
-import cn.edu.thssdb.sql.SQLBaseVisitor;
-import cn.edu.thssdb.sql.SQLParser;
 
-public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
+public class DropDatabasePlan extends LogicalPlan {
 
-  @Override
-  public LogicalPlan visitCreateDbStmt(SQLParser.CreateDbStmtContext ctx) {
-    return new CreateDatabasePlan(ctx.databaseName().getText());
-  }
+    private String databaseName;
 
-  @Override
-  public LogicalPlan visitDropDbStmt(SQLParser.DropDbStmtContext ctx) {
-    return new DropDatabasePlan(ctx.databaseName().getText());
-  }
+    public DropDatabasePlan(String databaseName) {
+        super(LogicalPlanType.DROP_DB);
+        System.out.println("DropDatabasePlan: [DEBUG] " + databaseName);
+        this.databaseName = databaseName;
+    }
 
-  @Override
-  public LogicalPlan visitUseDbStmt(SQLParser.UseDbStmtContext ctx) {
-      return new UseDatabasePlan(ctx.databaseName().getText());
-  }
-  // TODO: parser to more logical plan
+    public String getDatabaseName() {
+        return databaseName;
+    }
+
+    @Override
+    public String toString() {
+        return "DropDatabasePlan{" + "databaseName='" + databaseName + '\'' + '}';
+    }
 }
