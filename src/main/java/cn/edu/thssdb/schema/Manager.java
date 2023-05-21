@@ -25,23 +25,35 @@ public class Manager {
     try {
       lock.readLock().lock();
       return currentDB;
-    }
-    finally {
+    } finally {
       lock.readLock().unlock();
     }
   }
 
+  public void setCurrentDB(String dbName) {
+    // 设置当前正在使用的database
+    try {
+      lock.writeLock().lock();
+      if (!databases.containsKey(dbName))
+        throw new KeyNotExistException();
+      // TODO throw new DatabaseNotExistException(dbName);
+      currentDB = databases.get(dbName);
+      System.out.println("Current database is " + dbName);
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
 
   public boolean containDatabase(String dbName) {
     // TODO
     try {
       lock.readLock().lock();
       return databases.containsKey(dbName);
-    }
-    finally {
+    } finally {
       lock.readLock().unlock();
     }
   }
+
   public void createDatabaseIfNotExists(String dbName) {
     // TODO
     try {
@@ -53,15 +65,13 @@ public class Manager {
           lock.readLock().lock();
           if (!databases.containsKey(dbName))
             throw new KeyNotExistException();
-            // TODO throw new DatabaseNotExistException(dbName);
+          // TODO throw new DatabaseNotExistException(dbName);
           currentDB = databases.get(dbName);
-        }
-        finally {
+        } finally {
           lock.readLock().unlock();
         }
       }
-    }
-    finally {
+    } finally {
       lock.writeLock().unlock();
     }
   }
@@ -72,11 +82,10 @@ public class Manager {
       lock.writeLock().lock();
       if (!databases.containsKey(dbName))
         throw new KeyNotExistException();
-        // TODO throw new DatabaseNotExistException(dbName);
+      // TODO throw new DatabaseNotExistException(dbName);
       databases.remove(dbName);
       // TODO 删除对应的文件夹（调用 database.dropSelf()
-    }
-    finally {
+    } finally {
       lock.writeLock().unlock();
     }
   }
@@ -88,6 +97,7 @@ public class Manager {
   private static class ManagerHolder {
     private static final Manager INSTANCE = new Manager();
 
-    private ManagerHolder() {}
+    private ManagerHolder() {
+    }
   }
 }
