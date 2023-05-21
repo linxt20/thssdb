@@ -31,6 +31,21 @@ public class Manager {
     }
   }
 
+  public void setCurrentDB(String dbName) {
+    // 设置当前正在使用的database
+    try {
+      lock.writeLock().lock();
+      if (!databases.containsKey(dbName))
+        throw new KeyNotExistException();
+        // TODO throw new DatabaseNotExistException(dbName);
+      currentDB = databases.get(dbName);
+      System.out.println("Current database is " + dbName);
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
 
   public boolean containDatabase(String dbName) {
     // TODO
