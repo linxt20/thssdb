@@ -70,22 +70,23 @@ public class Database {
         }
     }
 
-    public void drop() {
-        System.out.println("Database drop");
-        // TODO 需要修改
-        try {
-            lock.writeLock().lock();
-            if (!tables.containsKey(name)) throw new KeyNotExistException();
-            // TODO throw new TableNotExistException(name);
-            String metaFilename = storage_dir + "meta_" + this.name + "_" + name + ".data";
-            File metaFile = new File(metaFilename);
-            if (metaFile.isFile()) metaFile.delete();
-            Table table = tables.get(name);
-            // table.dropall();
-            tables.remove(name);
-        } finally {
-            lock.writeLock().unlock();
-        }
+  public void drop() {
+    System.out.println("Database drop");
+    // TODO 需要修改
+    try {
+      lock.writeLock().lock();
+      if (!tables.containsKey(name))
+        throw new KeyNotExistException();
+      // TODO throw new TableNotExistException(name);
+      String metaFilename = storage_dir + this.name + "_" + name + "_meta.data";
+      File metaFile = new File(metaFilename);
+      if (metaFile.isFile())
+        metaFile.delete();
+      Table table = tables.get(name);
+      // table.dropall();
+      tables.remove(name);
+    } finally {
+      lock.writeLock().unlock();
     }
 
     // 展示database中tableName表中的元数据
