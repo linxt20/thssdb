@@ -3,6 +3,7 @@ package cn.edu.thssdb.schema;
 import cn.edu.thssdb.exception.DuplicateKeyException;
 import cn.edu.thssdb.exception.KeyNotExistException;
 import cn.edu.thssdb.storage.Cache;
+import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
@@ -26,20 +27,25 @@ public class Table implements Iterable<Row> {
   private int primaryIndex; // 主键的索引 就是主键在columns中的下标
   public Cache cache;
 
-  // TODO 暂时不考虑锁，后面再补充
+    // TODO 暂时不考虑锁，后面再补充
 
-  public Table(String databaseName, String tableName, Column[] columns) {
-    System.out.println("==========Table constructor=============");
-    this.lock = new ReentrantReadWriteLock();
-    this.databaseName = databaseName;
-    this.tableName = tableName;
-    this.columns = new ArrayList<>();
-    this.primaryIndex = -1;
-    for (int i = 0; i < columns.length; i++) {
-      this.columns.add(columns[i]);
-      if (columns[i].getPrimary() == 1) {
-        this.primaryIndex = i;
-      }
+    public Table(String databaseName, String tableName, Column[] columns) {
+        System.out.println("==========Table constructor=============");
+        this.lock = new ReentrantReadWriteLock();
+        this.databaseName = databaseName;
+        this.tableName = tableName;
+        this.columns = new ArrayList<>();
+        this.primaryIndex = -1;
+        for (int i = 0; i < columns.length; i++) {
+            this.columns.add(columns[i]);
+            if (columns[i].getPrimary() == 1) {
+                this.primaryIndex = i;
+            }
+        }
+        // TODO primaryIndex如果没有被更新需要抛出异常
+        this.cache = new Cache(databaseName, tableName);
+        // TODO 一些后面要加的变量
+        recover();
     }
     // TODO primaryIndex如果没有被更新需要抛出异常
     this.cache = new Cache(databaseName, tableName);
@@ -232,18 +238,7 @@ public class Table implements Iterable<Row> {
     }
 
     @Override
-    public boolean hasNext() {
-      return iterator.hasNext();
+    public Iterator<Row> iterator() {
+        return new TableIterator(this);
     }
-
-    @Override
-    public Row next() {
-      return iterator.next().right;
-    }
-  }
-
-  @Override
-  public Iterator<Row> iterator() {
-    return new TableIterator(this);
-  }
 }

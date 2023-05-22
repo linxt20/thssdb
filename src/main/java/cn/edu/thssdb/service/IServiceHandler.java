@@ -15,11 +15,13 @@ import cn.edu.thssdb.rpc.thrift.IService;
 import cn.edu.thssdb.rpc.thrift.Status;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.StatusUtil;
 import org.apache.thrift.TException;
 
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class IServiceHandler implements IService.Iface {
@@ -106,6 +108,28 @@ public class IServiceHandler implements IService.Iface {
         name = showTablePlan.getTableName();
         String ret = Manager.getInstance().getCurrentDB().show(name.toLowerCase());
         return new ExecuteStatementResp(StatusUtil.success(ret), false);
+
+      case INSERT:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        InsertPlan insertPlan = (InsertPlan) plan;
+        // TODO read commit锁 目前先不加
+        String table_name = insertPlan.getTableName();
+        String[] column_names = insertPlan.getColumnNames();
+        List<SQLParser.ValueEntryContext> value_entrys = insertPlan.getValueEntryContextList();
+        for (SQLParser.ValueEntryContext value_entry : value_entrys)
+        {
+          int size = value_entry.literalValue().size();
+          String[] values = new String[size];
+          for (int i = 0; i < size; i++) {
+            values[i] = value_entry.literalValue(i).getText();
+          }
+          try {
+            Manager.getInstance().getCurrentDB().insert(table_name, column_names, values);
+          } catch (Exception e) {
+            System.out.println(e.getMessage());
+          }
+        }
+        return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
 
       default:
     }
