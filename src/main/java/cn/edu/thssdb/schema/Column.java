@@ -20,7 +20,10 @@ public class Column implements Comparable<Column> {
   }
   public String getName() { return this.name; }
   public ColumnType getType() { return this.type; }
-  public void setPrimary(int new_primary) {primary = new_primary;}
+  public void setPrimary(int new_primary) {
+    primary = new_primary;
+    notNull = true;
+  }
   public int getPrimary() { return primary; }
   public boolean NotNull() {return this.notNull;}
   public int getMaxLength() {return maxLength;}
@@ -45,31 +48,6 @@ public class Column implements Comparable<Column> {
       ret += "\tnot null";
     }
     return ret;
-  }
-
-  public void setPrimary(int new_primary) {
-    primary = new_primary;
-    notNull = true;
-  }
-
-  public int getPrimary() {
-    return primary;
-  }
-
-  public int getMaxLength() {
-    return maxLength;
-  }
-
-  public String getName() {
-    return this.name;
-  }
-
-  public boolean NotNull() {
-    return this.notNull;
-  }
-
-  public ColumnType getType() {
-    return this.type;
   }
 
   public static ColumnType str2DataType(String strType) {

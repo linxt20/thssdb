@@ -82,6 +82,15 @@ public class Table implements Iterable<Row> {
     }
   }
 
+  public String show() {
+    String ret = "------------------------------------------------------\n";
+    for (Column column : columns) {
+      ret += column.show() + "\n";
+    }
+    ret += "------------------------------------------------------";
+    return ret;
+  }
+
   public void insert() {
     // TODO
   }
