@@ -34,8 +34,7 @@ public class Manager {
     // 设置当前正在使用的database
     try {
       lock.writeLock().lock();
-      if (!databases.containsKey(dbName))
-        throw new KeyNotExistException();
+      if (!databases.containsKey(dbName)) throw new KeyNotExistException();
       // TODO throw new DatabaseNotExistException(dbName);
       currentDB = databases.get(dbName);
       System.out.println("Current database is " + dbName);
@@ -58,13 +57,11 @@ public class Manager {
     // TODO
     try {
       lock.writeLock().lock();
-      if (!databases.containsKey(dbName))
-        databases.put(dbName, new Database(dbName));
+      if (!databases.containsKey(dbName)) databases.put(dbName, new Database(dbName));
       if (currentDB == null) {
         try {
           lock.readLock().lock();
-          if (!databases.containsKey(dbName))
-            throw new KeyNotExistException();
+          if (!databases.containsKey(dbName)) throw new KeyNotExistException();
           // TODO throw new DatabaseNotExistException(dbName);
           currentDB = databases.get(dbName);
         } finally {
@@ -80,8 +77,7 @@ public class Manager {
     // TODO
     try {
       lock.writeLock().lock();
-      if (!databases.containsKey(dbName))
-        throw new KeyNotExistException();
+      if (!databases.containsKey(dbName)) throw new KeyNotExistException();
       // TODO throw new DatabaseNotExistException(dbName);
       databases.remove(dbName);
       // TODO 删除对应的文件夹（调用 database.dropSelf()
@@ -97,7 +93,6 @@ public class Manager {
   private static class ManagerHolder {
     private static final Manager INSTANCE = new Manager();
 
-    private ManagerHolder() {
-    }
+    private ManagerHolder() {}
   }
 }

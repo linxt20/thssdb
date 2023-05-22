@@ -2,9 +2,7 @@ package cn.edu.thssdb.service;
 
 import cn.edu.thssdb.plan.LogicalGenerator;
 import cn.edu.thssdb.plan.LogicalPlan;
-import cn.edu.thssdb.plan.impl.CreateDatabasePlan;
-import cn.edu.thssdb.plan.impl.DropDatabasePlan;
-import cn.edu.thssdb.plan.impl.UseDatabasePlan;
+import cn.edu.thssdb.plan.impl.*;
 import cn.edu.thssdb.rpc.thrift.ConnectReq;
 import cn.edu.thssdb.rpc.thrift.ConnectResp;
 import cn.edu.thssdb.rpc.thrift.DisconnectReq;
@@ -15,7 +13,7 @@ import cn.edu.thssdb.rpc.thrift.GetTimeReq;
 import cn.edu.thssdb.rpc.thrift.GetTimeResp;
 import cn.edu.thssdb.rpc.thrift.IService;
 import cn.edu.thssdb.rpc.thrift.Status;
-import cn.edu.thssdb.schema.Database;
+import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.StatusUtil;
@@ -54,7 +52,7 @@ public class IServiceHandler implements IService.Iface {
           StatusUtil.fail("You are not connected. Please connect first."), false);
     }
     // TODO: implement execution logic
-    LogicalPlan plan = LogicalGenerator.generate(req.statement);
+    LogicalPlan plan = LogicalGenerator.generate(req.statement); // 这里会调用parser解析语句
     String name;
     switch (plan.getType()) {
       case CREATE_DB:
@@ -66,7 +64,8 @@ public class IServiceHandler implements IService.Iface {
           return new ExecuteStatementResp(StatusUtil.fail("Database already exists."), false);
         } else {
           Manager.getInstance().createDatabaseIfNotExists(name);
-          return new ExecuteStatementResp(StatusUtil.success(), false);
+          return new ExecuteStatementResp(
+              StatusUtil.success("Database " + name + " created."), false);
         }
       case DROP_DB:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
@@ -75,7 +74,8 @@ public class IServiceHandler implements IService.Iface {
         // 判断是否已经存在这个database，如果不存在则返回fail，否则删除并返回success
         if (Manager.getInstance().containDatabase(name)) {
           Manager.getInstance().deleteDatabase(name);
-          return new ExecuteStatementResp(StatusUtil.success(), false);
+          return new ExecuteStatementResp(
+              StatusUtil.success("Database " + name + " dropped."), false);
         } else {
           return new ExecuteStatementResp(StatusUtil.fail("Database does not exist."), false);
         }
@@ -86,10 +86,27 @@ public class IServiceHandler implements IService.Iface {
         // 判断是否已经存在这个database，如果不存在则返回fail，否则设置manager中的currentDB后返回success
         if (Manager.getInstance().containDatabase(name)) {
           Manager.getInstance().setCurrentDB(name);
-          return new ExecuteStatementResp(StatusUtil.success(), false);
+          return new ExecuteStatementResp(
+              StatusUtil.success("Switched to database " + name + " ."), false);
         } else {
           return new ExecuteStatementResp(StatusUtil.fail("Database does not exist."), false);
         }
+      case CREATE_TABLE:
+        // TODO 检查table是否已经存在～
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        CreateTablePlan createTablePlan = (CreateTablePlan) plan;
+        name = createTablePlan.getTableName();
+        Column[] columns = createTablePlan.getColumns();
+        Manager.getInstance().getCurrentDB().create(name.toLowerCase(), columns);
+        return new ExecuteStatementResp(StatusUtil.success("Table " + name + " created."), false);
+
+      case SHOW_TABLE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        ShowTablePlan showTablePlan = (ShowTablePlan) plan;
+        name = showTablePlan.getTableName();
+        String ret = Manager.getInstance().getCurrentDB().show(name.toLowerCase());
+        return new ExecuteStatementResp(StatusUtil.success(ret), false);
+
       default:
     }
     return null;
