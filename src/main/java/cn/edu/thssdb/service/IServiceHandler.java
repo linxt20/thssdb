@@ -116,8 +116,7 @@ public class IServiceHandler implements IService.Iface {
         String table_name = insertPlan.getTableName();
         String[] column_names = insertPlan.getColumnNames();
         List<SQLParser.ValueEntryContext> value_entrys = insertPlan.getValueEntryContextList();
-        for (SQLParser.ValueEntryContext value_entry : value_entrys)
-        {
+        for (SQLParser.ValueEntryContext value_entry : value_entrys) {
           int size = value_entry.literalValue().size();
           String[] values = new String[size];
           for (int i = 0; i < size; i++) {

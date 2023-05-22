@@ -3,16 +3,12 @@ package cn.edu.thssdb.schema;
 import cn.edu.thssdb.exception.DuplicateKeyException;
 import cn.edu.thssdb.exception.KeyNotExistException;
 import cn.edu.thssdb.storage.Cache;
-import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,25 +23,20 @@ public class Table implements Iterable<Row> {
   private int primaryIndex; // 主键的索引 就是主键在columns中的下标
   public Cache cache;
 
-    // TODO 暂时不考虑锁，后面再补充
+  // TODO 暂时不考虑锁，后面再补充
 
-    public Table(String databaseName, String tableName, Column[] columns) {
-        System.out.println("==========Table constructor=============");
-        this.lock = new ReentrantReadWriteLock();
-        this.databaseName = databaseName;
-        this.tableName = tableName;
-        this.columns = new ArrayList<>();
-        this.primaryIndex = -1;
-        for (int i = 0; i < columns.length; i++) {
-            this.columns.add(columns[i]);
-            if (columns[i].getPrimary() == 1) {
-                this.primaryIndex = i;
-            }
-        }
-        // TODO primaryIndex如果没有被更新需要抛出异常
-        this.cache = new Cache(databaseName, tableName);
-        // TODO 一些后面要加的变量
-        recover();
+  public Table(String databaseName, String tableName, Column[] columns) {
+    System.out.println("==========Table constructor=============");
+    this.lock = new ReentrantReadWriteLock();
+    this.databaseName = databaseName;
+    this.tableName = tableName;
+    this.columns = new ArrayList<>();
+    this.primaryIndex = -1;
+    for (int i = 0; i < columns.length; i++) {
+      this.columns.add(columns[i]);
+      if (columns[i].getPrimary() == 1) {
+        this.primaryIndex = i;
+      }
     }
     // TODO primaryIndex如果没有被更新需要抛出异常
     this.cache = new Cache(databaseName, tableName);
@@ -55,14 +46,12 @@ public class Table implements Iterable<Row> {
   // getRow函数根据主键的值获取行数据
   public Row getRow(Entry primary_emrty) {
     Row row;
-    try{
+    try {
       lock.readLock().lock();
-      row = cache.getRow(primary_emrty,primaryIndex);
-    }
-    catch (KeyNotExistException e){
+      row = cache.getRow(primary_emrty, primaryIndex);
+    } catch (KeyNotExistException e) {
       throw e;
-    }
-    finally {
+    } finally {
       lock.readLock().unlock();
     }
     return row;
@@ -72,11 +61,9 @@ public class Table implements Iterable<Row> {
   private void recover() {
     // 获取存储目录下的所有文件
     File dir = new File(storage_dir);
-    if(!dir.exists()||!dir.isDirectory())
-      return;
+    if (!dir.exists() || !dir.isDirectory()) return;
     File[] fileList = dir.listFiles();
-    if (fileList == null)
-      return;
+    if (fileList == null) return;
     // 遍历所有文件，找到属于该表的文件
     HashMap<Integer, File> pageFileList = new HashMap<>();
     int pageNum = 0; // 记录最大的页号
@@ -86,13 +73,11 @@ public class Table implements Iterable<Row> {
     for (File f : fileList) {
       if (f != null && f.isFile()) {
         Matcher matcher = pattern.matcher(f.getName());
-        if(!matcher.matches())
-          continue;
+        if (!matcher.matches()) continue;
         String[] parts = f.getName().split("\\.")[0].split("_");
         int id = Integer.parseInt(parts[3]);
         pageFileList.put(id, f);
-        if (id > pageNum)
-          pageNum = id;
+        if (id > pageNum) pageNum = id;
       }
     }
     // 从文件中读取数据 需要注意页号是从1开始的
@@ -112,51 +97,46 @@ public class Table implements Iterable<Row> {
     return ret;
   }
   // insert函数将传入的列数据按照当前table的列顺序插入到cache中
-  public void insert(ArrayList<Column> columns,ArrayList<Entry> entries,boolean in_tran) {
-    if(columns == null || entries == null)
-      return;
+  public void insert(ArrayList<Column> columns, ArrayList<Entry> entries, boolean in_tran) {
+    if (columns == null || entries == null) return;
     int len = this.columns.size(); // 当前表的列数
-    if(columns.size() != len || entries.size() != len)
-      return;
+    if (columns.size() != len || entries.size() != len) return;
     // 将entries按照当前table列的顺序排序
     ArrayList<Entry> entry_list_sorted = new ArrayList<>();
-    HashMap<Column,Integer> column_index = new HashMap<>();
-    for(int i = 0;i < len;i++){
-      column_index.put(this.columns.get(i),i);
+    HashMap<Column, Integer> column_index = new HashMap<>();
+    for (int i = 0; i < len; i++) {
+      column_index.put(this.columns.get(i), i);
     }
-    for(Column column: this.columns){
-        int index = column_index.get(column);
-        entry_list_sorted.add(entries.get(index));
+    for (Column column : this.columns) {
+      int index = column_index.get(column);
+      entry_list_sorted.add(entries.get(index));
     }
     // 将这个entry_list_sorted插入到cache中
-    try{
+    try {
       lock.writeLock().lock();
-      cache.insertRow(entry_list_sorted,primaryIndex,in_tran);
-    }
-    catch (DuplicateKeyException e){
+      cache.insertRow(entry_list_sorted, primaryIndex, in_tran);
+    } catch (DuplicateKeyException e) {
       throw e;
-    }
-    finally {
-        lock.writeLock().unlock();
+    } finally {
+      lock.writeLock().unlock();
     }
   }
   // delete函数删除主键值所对应的行
   // TODO 后续考虑加入选择逻辑
   public void delete(Entry primary_entry, boolean in_tran) {
-    if(primary_entry == null)
-      return;
-    try{
+    if (primary_entry == null) return;
+    try {
       lock.writeLock().lock();
-      cache.deleteRow(primary_entry,primaryIndex,in_tran);
-    }
-    finally {
+      cache.deleteRow(primary_entry, primaryIndex, in_tran);
+    } finally {
       lock.writeLock().unlock();
     }
   }
   // update函数更新主键值所对应的行
   // TODO 后续考虑加入选择逻辑
-  public void update(Entry primary_entry, ArrayList<Column> columns, ArrayList<Entry> entries, boolean in_tran) {
-    if(primary_entry == null || columns == null || entries == null)
+  public void update(
+      Entry primary_entry, ArrayList<Column> columns, ArrayList<Entry> entries, boolean in_tran) {
+    if (primary_entry == null || columns == null || entries == null)
       throw new KeyNotExistException(null);
 
     HashMap<Column, Integer> columnMap = new HashMap<>();
@@ -172,14 +152,12 @@ public class Table implements Iterable<Row> {
       targetKeys[i] = columnIndex;
     }
 
-    try{
+    try {
       lock.writeLock().lock();
-      cache.updateRow(primary_entry,primaryIndex ,targetKeys,entries,in_tran);
-    }
-    catch (KeyNotExistException | DuplicateKeyException e) {
+      cache.updateRow(primary_entry, primaryIndex, targetKeys, entries, in_tran);
+    } catch (KeyNotExistException | DuplicateKeyException e) {
       throw e;
-    }
-    finally {
+    } finally {
       lock.writeLock().unlock();
     }
   }
@@ -192,8 +170,7 @@ public class Table implements Iterable<Row> {
 
       File dir = new File(storage_dir);
       File[] fileList = dir.listFiles();
-      if (fileList == null)
-        return;
+      if (fileList == null) return;
       // 这个正则表达式需要在page_database_table_pageid.data和meta_database_table.data这两种文件中匹配database_table符合要求的文件
       String regex = "^(page|meta)_" + databaseName + "_" + tableName + "(_\\d+)?\\.data$";
       Pattern pattern = Pattern.compile(regex);
@@ -216,17 +193,16 @@ public class Table implements Iterable<Row> {
     return cache.data_deserialize(file);
   }
   // persist函数将cache中的数据持久化到文件中
-  public void persist(){
-    try{
+  public void persist() {
+    try {
       lock.writeLock().lock();
       cache.data_persist();
-    }
-    finally {
+    } finally {
       lock.writeLock().unlock();
     }
   }
   // 解除事务
-  public void quit_tran(){
+  public void quit_tran() {
     cache.quit_tran();
   }
   // TODO 这个TableIterator类用于实现Table的迭代器，但是还不太理解有什么作用
@@ -238,7 +214,18 @@ public class Table implements Iterable<Row> {
     }
 
     @Override
-    public Iterator<Row> iterator() {
-        return new TableIterator(this);
+    public boolean hasNext() {
+      return iterator.hasNext();
     }
+
+    @Override
+    public Row next() {
+      return iterator.next().right;
+    }
+  }
+
+  @Override
+  public Iterator<Row> iterator() {
+    return new TableIterator(this);
+  }
 }

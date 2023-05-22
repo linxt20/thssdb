@@ -21,14 +21,10 @@ package cn.edu.thssdb.parser;
 import cn.edu.thssdb.plan.LogicalPlan;
 import cn.edu.thssdb.plan.impl.*;
 import cn.edu.thssdb.schema.Column;
-import cn.edu.thssdb.schema.Database;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLBaseVisitor;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Pair;
-
-import java.util.ArrayList;
 
 public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
@@ -146,111 +142,110 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
   }
 
   @Override
-  public LogicalPlan visitInsertStmt(SQLParser.InsertStmtContext ctx){
-    //table name
+  public LogicalPlan visitInsertStmt(SQLParser.InsertStmtContext ctx) {
+    // table name
     String table_name = ctx.tableName().getText().toLowerCase();
 
-    //column name 转换为string TODO 有效率更高的转换方式吗？强制类型转换？
+    // column name 转换为string TODO 有效率更高的转换方式吗？强制类型转换？
     String[] column_names = null;
     if (ctx.columnName() != null && ctx.columnName().size() != 0) {
       column_names = new String[ctx.columnName().size()];
       for (int i = 0; i < ctx.columnName().size(); i++)
         column_names[i] = ctx.columnName(i).getText().toLowerCase();
     }
-    //应受隔离级别限制，暂时不实现
-    System.out.println("[Debug] valueEntry"+ctx.valueEntry().toString());
+    // 应受隔离级别限制，暂时不实现
+    System.out.println("[Debug] valueEntry" + ctx.valueEntry().toString());
     return new InsertPlan(table_name, column_names, ctx.valueEntry());
     // TODO 先处理数据，处理不放在并发控制里
-//    for (SQLParser.ValueEntryContext subCtx : ctx.valueEntry())
-//    {
-//      String[] values = visitValue_entry6(subCtx);
-//      try {
-//        the_database.insert(table_name, column_names, values);
-//      } catch (Exception e) {
-//        return e.toString();
-//      }
-//    }
-
+    //    for (SQLParser.ValueEntryContext subCtx : ctx.valueEntry())
+    //    {
+    //      String[] values = visitValue_entry6(subCtx);
+    //      try {
+    //        the_database.insert(table_name, column_names, values);
+    //      } catch (Exception e) {
+    //        return e.toString();
+    //      }
+    //    }
 
     // TODO 并发控制,session设定事务的隔离级别 之后移到IServiceHandler中
-//    Database the_database = GetCurrentDB();
-//
-//    if(manager.transaction_sessions.contains(session))
-//    {
-//      //manager.session_queue.add(session);
-//      Table the_table = the_database.get(table_name);
-//      while(true)
-//      {
-//        if(!manager.session_queue.contains(session))   //新加入一个session
-//        {
-//          int get_lock = the_table.get_x_lock(session);
-//          if(get_lock!=-1)
-//          {
-//            if(get_lock==1)
-//            {
-//              ArrayList<String> tmp = manager.x_lock_dict.get(session);
-//              tmp.add(table_name);
-//              manager.x_lock_dict.put(session,tmp);
-//            }
-//            break;
-//          }else
-//          {
-//            manager.session_queue.add(session);
-//          }
-//        }else    //之前等待的session
-//        {
-//          if(manager.session_queue.get(0)==session)  //只查看阻塞队列开头session
-//          {
-//            int get_lock = the_table.get_x_lock(session);
-//            if(get_lock!=-1)
-//            {
-//              if(get_lock==1)
-//              {
-//                ArrayList<String> tmp = manager.x_lock_dict.get(session);
-//                tmp.add(table_name);
-//                manager.x_lock_dict.put(session,tmp);
-//              }
-//              manager.session_queue.remove(0);
-//              break;
-//            }
-//          }
-//        }
-//        try
-//        {
-//          //System.out.print("session: "+session+": ");
-//          //System.out.println(manager.session_queue);
-//          Thread.sleep(500);   // 休眠3秒
-//        } catch (Exception e) {
-//          System.out.println("Got an exception!");
-//        }
-//      }
-//      for (SQLParser.ValueEntryContext subCtx : ctx.valueEntry())
-//      {
-//        String[] values = visitValue_entry6(subCtx);
-//        try {
-//          if(column_names == null)
-//          {
-//            the_table.insert(values);
-//          }
-//          else
-//          {
-//            the_table.insert(column_names, values);
-//          }
-//        } catch (Exception e) {
-//          return e.toString();
-//        }
-//      }
-//    }else{
-//      for (SQLParser.ValueEntryContext subCtx : ctx.valueEntry())
-//      {
-//        String[] values = visitValue_entry6(subCtx);
-//        try {
-//          the_database.insert(table_name, column_names, values);
-//        } catch (Exception e) {
-//          return e.toString();
-//        }
-//      }
-//    }
+    //    Database the_database = GetCurrentDB();
+    //
+    //    if(manager.transaction_sessions.contains(session))
+    //    {
+    //      //manager.session_queue.add(session);
+    //      Table the_table = the_database.get(table_name);
+    //      while(true)
+    //      {
+    //        if(!manager.session_queue.contains(session))   //新加入一个session
+    //        {
+    //          int get_lock = the_table.get_x_lock(session);
+    //          if(get_lock!=-1)
+    //          {
+    //            if(get_lock==1)
+    //            {
+    //              ArrayList<String> tmp = manager.x_lock_dict.get(session);
+    //              tmp.add(table_name);
+    //              manager.x_lock_dict.put(session,tmp);
+    //            }
+    //            break;
+    //          }else
+    //          {
+    //            manager.session_queue.add(session);
+    //          }
+    //        }else    //之前等待的session
+    //        {
+    //          if(manager.session_queue.get(0)==session)  //只查看阻塞队列开头session
+    //          {
+    //            int get_lock = the_table.get_x_lock(session);
+    //            if(get_lock!=-1)
+    //            {
+    //              if(get_lock==1)
+    //              {
+    //                ArrayList<String> tmp = manager.x_lock_dict.get(session);
+    //                tmp.add(table_name);
+    //                manager.x_lock_dict.put(session,tmp);
+    //              }
+    //              manager.session_queue.remove(0);
+    //              break;
+    //            }
+    //          }
+    //        }
+    //        try
+    //        {
+    //          //System.out.print("session: "+session+": ");
+    //          //System.out.println(manager.session_queue);
+    //          Thread.sleep(500);   // 休眠3秒
+    //        } catch (Exception e) {
+    //          System.out.println("Got an exception!");
+    //        }
+    //      }
+    //      for (SQLParser.ValueEntryContext subCtx : ctx.valueEntry())
+    //      {
+    //        String[] values = visitValue_entry6(subCtx);
+    //        try {
+    //          if(column_names == null)
+    //          {
+    //            the_table.insert(values);
+    //          }
+    //          else
+    //          {
+    //            the_table.insert(column_names, values);
+    //          }
+    //        } catch (Exception e) {
+    //          return e.toString();
+    //        }
+    //      }
+    //    }else{
+    //      for (SQLParser.ValueEntryContext subCtx : ctx.valueEntry())
+    //      {
+    //        String[] values = visitValue_entry6(subCtx);
+    //        try {
+    //          the_database.insert(table_name, column_names, values);
+    //        } catch (Exception e) {
+    //          return e.toString();
+    //        }
+    //      }
+    //    }
 
   }
 
@@ -261,9 +256,6 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     }
     return values;
   }
-
-
-
 
   // TODO: parser to more logical plan
 }

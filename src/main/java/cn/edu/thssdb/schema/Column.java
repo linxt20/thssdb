@@ -66,6 +66,7 @@ public class Column implements Comparable<Column> {
     }
     return ret;
   }
+
   public static ColumnType str2DataType(String strType) {
     switch (strType.toLowerCase()) {
       case "string":
