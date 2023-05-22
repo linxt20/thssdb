@@ -29,8 +29,7 @@ public class Table implements Iterable<Row> {
     this.tableName = tableName;
     this.columns = new ArrayList<>(Arrays.asList(columns));
     for (int i = 0; i < this.columns.size(); i++) {
-      if (this.columns.get(i).getPrimary() == 1)
-        primaryIndex = i;
+      if (this.columns.get(i).getPrimary() == 1) primaryIndex = i;
     }
     if (primaryIndex < 0 || primaryIndex >= this.columns.size()) {
       System.out.println("Primary key not exist");
@@ -59,8 +58,7 @@ public class Table implements Iterable<Row> {
     // TODO 需要修改
     File dir = new File(storage_dir);
     File[] fileList = dir.listFiles();
-    if (fileList == null)
-      return;
+    if (fileList == null) return;
 
     HashMap<Integer, File> pageFileList = new HashMap<>();
     int pageNum = 0;
@@ -77,8 +75,7 @@ public class Table implements Iterable<Row> {
           if (!(this.databaseName.equals(databaseName) && this.tableName.equals(tableName)))
             continue;
           pageFileList.put(id, f);
-          if (id > pageNum)
-            pageNum = id;
+          if (id > pageNum) pageNum = id;
         } catch (Exception e) {
           continue;
         }
@@ -118,8 +115,7 @@ public class Table implements Iterable<Row> {
 
       File dir = new File(storage_dir);
       File[] fileList = dir.listFiles();
-      if (fileList == null)
-        return;
+      if (fileList == null) return;
       for (File f : fileList) {
         if (f != null && f.isFile()) {
           try {

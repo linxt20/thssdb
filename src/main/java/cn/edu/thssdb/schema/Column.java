@@ -30,13 +30,13 @@ public class Column implements Comparable<Column> {
 
   public String show() {
     String ret = name + "\t" + type;
-    if(type.equals(ColumnType.STRING)) {
+    if (type.equals(ColumnType.STRING)) {
       ret += "(" + maxLength + ")";
     }
-    if(primary == 1) {
+    if (primary == 1) {
       ret += "\tprimary key";
     }
-    if(notNull) {
+    if (notNull) {
       ret += "\tnot null";
     }
     return ret;
