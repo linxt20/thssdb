@@ -68,7 +68,8 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     if (ctx.tableConstraint() != null) {
       // 处理表定义的限制，即create table中最后一行指定的primary key
       int tableConstraintSize = ctx.tableConstraint().columnName().size();
-      String[] compositeNames = new String[tableConstraintSize];// visitTableConstraint1(ctx.tableConstraint());
+      String[] compositeNames =
+          new String[tableConstraintSize]; // visitTableConstraint1(ctx.tableConstraint());
       for (int j = 0; j < tableConstraintSize; j++) {
         compositeNames[j] = ctx.tableConstraint().columnName(j).getText().toLowerCase();
       }
