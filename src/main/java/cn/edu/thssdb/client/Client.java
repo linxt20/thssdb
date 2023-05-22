@@ -48,13 +48,14 @@ public class Client {
 
   private static IService.Client client;
 
-  public static void main(String[] args) {
-    CommandLine commandLine = parseCmd(args);
-    if (commandLine.hasOption(HELP_ARGS)) {
+  public static void main(String[] args) { // 客户端主函数 读取输入语句
+    CommandLine commandLine = parseCmd(args); // 解析客户端启动语句
+    if (commandLine.hasOption(HELP_ARGS)) { // 输出帮助信息
       showHelp();
       return;
     }
     try {
+      // 首先是获取host和port，连接服务器
       echoStarting();
       String host = commandLine.getOptionValue(HOST_ARGS, Global.DEFAULT_SERVER_HOST);
       int port =
@@ -65,6 +66,7 @@ public class Client {
       TProtocol protocol = new TBinaryProtocol(transport);
       client = new IService.Client(protocol);
       boolean open = true;
+      // 进入消息循环处理，这里处理connect,disconnect,show time和quit四种特殊语句和sql语句执行
       while (true) {
         print(Global.CLI_PREFIX);
         String msg = SCANNER.nextLine().trim();
@@ -100,7 +102,7 @@ public class Client {
       logger.error(e.getMessage());
     }
   }
-
+  // 获取时间函数
   private static void getTime() {
     GetTimeReq req = new GetTimeReq();
     try {
@@ -109,15 +111,19 @@ public class Client {
       logger.error(e.getMessage());
     }
   }
-
+  // 执行函数
   private static void execute(String statement) {
+    // 传递基础参数
     ExecuteStatementReq req = new ExecuteStatementReq();
     req.setSessionId(sessionID);
     req.setStatement(statement);
     try {
+      // 实际的执行函数为executeStatement
       ExecuteStatementResp resp = client.executeStatement(req);
       if (resp.status.code == Global.SUCCESS_CODE) {
         if (resp.hasResult) {
+          // TODO: 这里没有有处理行或者列为null的情况
+          // 这里先输出列标题，然后一行一行输出
           StringBuilder column_str = new StringBuilder();
           int column_size = resp.columnsList.size();
           for (int i = 0; i < column_size; ++i) {
@@ -145,7 +151,7 @@ public class Client {
       logger.error(e.getMessage());
     }
   }
-
+  // 连接函数，看样子是可以同时开启多个客户端
   private static void connect(String username, String password) {
     ConnectReq req = new ConnectReq();
     req.setUsername(username);
@@ -163,7 +169,7 @@ public class Client {
       logger.error(e.getMessage());
     }
   }
-
+  // 断开连接函数
   private static void disconnect() {
     if (sessionID < 0) {
       println("you're not connected. plz connect first.");
@@ -184,7 +190,7 @@ public class Client {
     }
   }
 
-  private static Options createOptions() {
+  private static Options createOptions() { // 输入类型
     Options options = new Options();
     options.addOption(
         Option.builder(HELP_ARGS)
@@ -210,7 +216,7 @@ public class Client {
     return options;
   }
 
-  private static CommandLine parseCmd(String[] args) {
+  private static CommandLine parseCmd(String[] args) { // 匹配是help还是host还是port
     Options options = createOptions();
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = null;
@@ -225,7 +231,7 @@ public class Client {
   }
 
   private static void showHelp() {
-    // TODO
+    // TODO:test this with something like ./client -help
     println("DO IT YOURSELF");
   }
 

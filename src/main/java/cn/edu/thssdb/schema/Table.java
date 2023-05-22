@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import static cn.edu.thssdb.utils.Global.STORE_DIRECTORY;
+import static cn.edu.thssdb.utils.Global.storage_dir;
 
 public class Table implements Iterable<Row> {
   ReentrantReadWriteLock lock;
@@ -29,7 +29,8 @@ public class Table implements Iterable<Row> {
     this.tableName = tableName;
     this.columns = new ArrayList<>(Arrays.asList(columns));
     for (int i = 0; i < this.columns.size(); i++) {
-      if (this.columns.get(i).getPrimary() == 1) primaryIndex = i;
+      if (this.columns.get(i).getPrimary() == 1)
+        primaryIndex = i;
     }
     if (primaryIndex < 0 || primaryIndex >= this.columns.size()) {
       System.out.println("Primary key not exist");
@@ -38,10 +39,10 @@ public class Table implements Iterable<Row> {
     this.lock = new ReentrantReadWriteLock();
 
     // TODO 一些后面要加的变量
-    //    this.cache = new Cache(databaseName, tableName);
-    //    this.s_lock_list = new ArrayList<>();
-    //    this.x_lock_list = new ArrayList<>();
-    //    this.tplock = 0;
+    // this.cache = new Cache(databaseName, tableName);
+    // this.s_lock_list = new ArrayList<>();
+    // this.x_lock_list = new ArrayList<>();
+    // this.tplock = 0;
     recover();
   }
 
@@ -56,9 +57,10 @@ public class Table implements Iterable<Row> {
 
   private void recover() {
     // TODO 需要修改
-    File dir = new File(STORE_DIRECTORY);
+    File dir = new File(storage_dir);
     File[] fileList = dir.listFiles();
-    if (fileList == null) return;
+    if (fileList == null)
+      return;
 
     HashMap<Integer, File> pageFileList = new HashMap<>();
     int pageNum = 0;
@@ -75,7 +77,8 @@ public class Table implements Iterable<Row> {
           if (!(this.databaseName.equals(databaseName) && this.tableName.equals(tableName)))
             continue;
           pageFileList.put(id, f);
-          if (id > pageNum) pageNum = id;
+          if (id > pageNum)
+            pageNum = id;
         } catch (Exception e) {
           continue;
         }
@@ -113,9 +116,10 @@ public class Table implements Iterable<Row> {
       // cache.dropSelf();
       // cache = null;
 
-      File dir = new File(STORE_DIRECTORY);
+      File dir = new File(storage_dir);
       File[] fileList = dir.listFiles();
-      if (fileList == null) return;
+      if (fileList == null)
+        return;
       for (File f : fileList) {
         if (f != null && f.isFile()) {
           try {
