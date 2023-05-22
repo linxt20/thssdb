@@ -49,7 +49,7 @@ public class Cache {
     }
   }
   // 反序列化，就是从磁盘读数据转化为行数据
-  private ArrayList<Row> data_deserialize(File file) {
+  public ArrayList<Row> data_deserialize(File file) {
     ArrayList<Row> row_list;
     ObjectInputStream inputStream = null;
     try {
@@ -240,7 +240,7 @@ public class Cache {
     }
   }
   // 删除表所有的数据,这种简洁的写法有个问题，需要在其他地方保证没有对于index和page的引用，也就是不能存在对于其中内容的引用变量作为了全局变量
-  public void dropall() {
+  public void drop_all() {
     for (Page page : page_map.values()) {
       page.getEntry_list().clear();
     }

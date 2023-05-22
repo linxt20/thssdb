@@ -31,7 +31,7 @@ public class Database {
     System.out.println("Database persist");
     // TODO 需要修改
     for (Table table : tables.values()) {
-      String filename = storage_dir + name + "_" + table.tableName + "_meta.data";
+      String filename = storage_dir + "meta_" + name + "_" + table.tableName + ".data";
       ArrayList<Column> columns = table.columns;
       try {
         FileOutputStream fos = new FileOutputStream(filename);
@@ -78,7 +78,7 @@ public class Database {
       if (!tables.containsKey(name))
         throw new KeyNotExistException();
       // TODO throw new TableNotExistException(name);
-      String metaFilename = storage_dir + this.name + "_" + name + "_meta.data";
+      String metaFilename = storage_dir + "meta_" + this.name + "_" + name + ".data";
       File metaFile = new File(metaFilename);
       if (metaFile.isFile())
         metaFile.delete();
