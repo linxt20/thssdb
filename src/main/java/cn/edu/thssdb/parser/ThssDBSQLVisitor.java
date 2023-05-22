@@ -39,7 +39,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   @Override
   public LogicalPlan visitUseDbStmt(SQLParser.UseDbStmtContext ctx) {
-      return new UseDatabasePlan(ctx.databaseName().getText());
+    return new UseDatabasePlan(ctx.databaseName().getText());
   }
   // TODO: parser to more logical plan
 }

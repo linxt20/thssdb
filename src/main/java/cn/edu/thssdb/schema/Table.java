@@ -1,6 +1,7 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
+import cn.edu.thssdb.storage.Cache;
 import cn.edu.thssdb.utils.Pair;
 
 import java.util.ArrayList;
@@ -12,11 +13,26 @@ public class Table implements Iterable<Row> {
   private String databaseName;
   public String tableName;
   public ArrayList<Column> columns;
-  public BPlusTree<Entry, Row> index;
   private int primaryIndex;
+  public Cache cache;
+
+  // TODO 暂时不考虑锁，后面再补充
 
   public Table(String databaseName, String tableName, Column[] columns) {
-    // TODO
+    this.databaseName = databaseName;
+    this.tableName = tableName;
+    this.columns = new ArrayList<>();
+    this.lock = new ReentrantReadWriteLock();
+    this.primaryIndex = -1;
+    for (int i = 0; i < columns.length; i++) {
+      this.columns.add(columns[i]);
+      if (columns[i].getPrimary() == 1) {
+        this.primaryIndex = i;
+      }
+    }
+    // TODO primaryIndex如果没有被更新需要抛出异常
+    this.cache = new Cache(databaseName, tableName);
+    recover();
   }
 
   private void recover() {
@@ -48,7 +64,7 @@ public class Table implements Iterable<Row> {
     private Iterator<Pair<Entry, Row>> iterator;
 
     TableIterator(Table table) {
-      this.iterator = table.index.iterator();
+      this.iterator = table.cache.getIndexIter();
     }
 
     @Override
