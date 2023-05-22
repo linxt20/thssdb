@@ -29,7 +29,7 @@ public class Database {
 
   private void persist() {
     System.out.println("Database persist");
-    // 目前是抄的sgl的，需要修改
+    // TODO 需要修改
     for (Table table : tables.values()) {
       String filename = STORE_DIRECTORY + "meta_" + name + "_" + table.tableName + ".data";
       ArrayList<Column> columns = table.columns;
@@ -47,9 +47,15 @@ public class Database {
     }
   }
 
+  // 在database中创建table
   public void create(String name, Column[] columns) {
-    System.out.println("Database create table");
-    // 目前是抄的sgl的，需要修改
+    if (columns == null) {
+      System.out.println("Database create table, columns is null");
+      return;
+    } else
+      for (Column column : columns)
+        System.out.println("Database create table, " + column.toString());
+    // TODO 需要修改
     try {
       lock.writeLock().lock();
       if (tables.containsKey(name))
@@ -66,16 +72,14 @@ public class Database {
 
   public void drop() {
     System.out.println("Database drop");
-    // 目前是抄的sgl的，需要修改
+    // TODO 需要修改
     try {
       lock.writeLock().lock();
-      if (!tables.containsKey(name))
-        throw new KeyNotExistException();
-        // TODO throw new TableNotExistException(name);
+      if (!tables.containsKey(name)) throw new KeyNotExistException();
+      // TODO throw new TableNotExistException(name);
       String metaFilename = STORE_DIRECTORY + "meta_" + this.name + "_" + name + ".data";
       File metaFile = new File(metaFilename);
-      if (metaFile.isFile())
-        metaFile.delete();
+      if (metaFile.isFile()) metaFile.delete();
       Table table = tables.get(name);
       table.dropSelf();
       tables.remove(name);
@@ -84,23 +88,15 @@ public class Database {
     }
   }
 
-  public void dropSelf() {
-    // TODO：这个函数是sgl自己加的！！一定要改名！！
+  // 展示database中tableName表中的元数据
+  public String show(String tableName){
     try {
-      lock.writeLock().lock();
-      final String filenamePrefix = STORE_DIRECTORY + "meta_" + this.name + "_";
-      final String filenameSuffix = ".data";
-      for (Table table : tables.values()) {
-        File metaFile = new File(filenamePrefix + table.tableName + filenameSuffix);
-        if (metaFile.isFile())
-          metaFile.delete();
-        table.dropSelf();
-//                tables.remove(table.tableName);
-      }
-      tables.clear();
-      tables = null;
+      lock.readLock().lock();
+        if (!tables.containsKey(tableName)) throw new KeyNotExistException();
+        Table table = tables.get(tableName);
+        return table.show();
     } finally {
-      lock.writeLock().unlock();
+      lock.readLock().unlock();
     }
   }
 

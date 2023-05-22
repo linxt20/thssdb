@@ -27,7 +27,6 @@ sqlStmt :
     | useDbStmt
     | showDbStmt
     | showTableStmt
-    | showMetaStmt
     | quitStmt
     | updateStmt
     | commitStmt ;
@@ -47,9 +46,6 @@ dropUserStmt :
 createTableStmt :
     K_CREATE K_TABLE tableName
         '(' columnDef ( ',' columnDef )* ( ',' tableConstraint )? ')' ;
-
-showMetaStmt :
-    K_SHOW K_TABLE tableName ;
 
 grantStmt :
     K_GRANT authLevel ( ',' authLevel )* K_ON tableName K_TO userName ;
@@ -73,7 +69,7 @@ quitStmt :
     K_QUIT;
 
 showTableStmt :
-    K_SHOW K_DATABASE databaseName;
+    K_SHOW K_TABLE tableName;
 
 insertStmt :
     K_INSERT K_INTO tableName ( '(' columnName ( ',' columnName )* ')' )?
