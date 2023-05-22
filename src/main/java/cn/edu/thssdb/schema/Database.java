@@ -77,7 +77,7 @@ public class Database {
       lock.writeLock().lock();
       if (!tables.containsKey(name)) throw new KeyNotExistException();
       // TODO throw new TableNotExistException(name);
-      String metaFilename = storage_dir + "meta_" + this.name + "_" + name + ".data";
+      String metaFilename = storage_dir + this.name + "_" + name + "_meta.data";
       File metaFile = new File(metaFilename);
       if (metaFile.isFile()) metaFile.delete();
       Table table = tables.get(name);
