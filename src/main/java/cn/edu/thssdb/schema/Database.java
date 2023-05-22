@@ -29,6 +29,7 @@ public class Database {
 
   private void persist() {
     System.out.println("Database persist");
+    // TODO 需要修改
     for (Table table : tables.values()) {
       String filename = storage_dir + name + "_" + table.tableName + "_meta.data";
       ArrayList<Column> columns = table.columns;
@@ -46,9 +47,15 @@ public class Database {
     }
   }
 
+  // 在database中创建table
   public void create(String name, Column[] columns) {
-    System.out.println("Database create table");
-    // 目前是抄的sgl的，需要修改
+    if (columns == null) {
+      System.out.println("Database create table, columns is null");
+      return;
+    } else
+      for (Column column : columns)
+        System.out.println("Database create table, " + column.toString());
+    // TODO 需要修改
     try {
       lock.writeLock().lock();
       if (tables.containsKey(name))
@@ -65,7 +72,7 @@ public class Database {
 
   public void drop() {
     System.out.println("Database drop");
-    // 目前是抄的sgl的，需要修改
+    // TODO 需要修改
     try {
       lock.writeLock().lock();
       if (!tables.containsKey(name)) throw new KeyNotExistException();
@@ -81,8 +88,8 @@ public class Database {
     }
   }
 
-  public void dropSelf() {
-    // TODO：这个函数是sgl自己加的！！一定要改名！！
+  // 展示database中tableName表中的元数据
+  public String show(String tableName) {
     try {
       lock.writeLock().lock();
       final String filenamePrefix = storage_dir + this.name + "_";
@@ -96,7 +103,7 @@ public class Database {
       tables.clear();
       tables = null;
     } finally {
-      lock.writeLock().unlock();
+      lock.readLock().unlock();
     }
   }
 
