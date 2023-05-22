@@ -16,9 +16,9 @@ import static cn.edu.thssdb.utils.Global.storage_dir;
 
 public class Database {
 
-  private String name;
-  private HashMap<String, Table> tables;
-  ReentrantReadWriteLock lock;
+  private String name; // 数据库名
+  private HashMap<String, Table> tables; // 表名到表的映射
+  ReentrantReadWriteLock lock; // 读写锁
 
   public Database(String name) {
     this.name = name;
@@ -31,7 +31,7 @@ public class Database {
     System.out.println("Database persist");
     // TODO 需要修改
     for (Table table : tables.values()) {
-      String filename = storage_dir + "meta_" + name + "_" + table.tableName + ".data";
+      String filename = storage_dir + name + "_" + table.tableName + "_meta.data";
       ArrayList<Column> columns = table.columns;
       try {
         FileOutputStream fos = new FileOutputStream(filename);
@@ -75,13 +75,15 @@ public class Database {
     // TODO 需要修改
     try {
       lock.writeLock().lock();
-      if (!tables.containsKey(name)) throw new KeyNotExistException();
+      if (!tables.containsKey(name))
+        throw new KeyNotExistException();
       // TODO throw new TableNotExistException(name);
       String metaFilename = storage_dir + "meta_" + this.name + "_" + name + ".data";
       File metaFile = new File(metaFilename);
-      if (metaFile.isFile()) metaFile.delete();
+      if (metaFile.isFile())
+        metaFile.delete();
       Table table = tables.get(name);
-      table.dropSelf();
+      // table.dropall();
       tables.remove(name);
     } finally {
       lock.writeLock().unlock();
@@ -92,7 +94,8 @@ public class Database {
   public String show(String tableName) {
     try {
       lock.readLock().lock();
-      if (!tables.containsKey(tableName)) throw new KeyNotExistException();
+      if (!tables.containsKey(tableName))
+        throw new KeyNotExistException();
       Table table = tables.get(tableName);
       return table.show();
     } finally {

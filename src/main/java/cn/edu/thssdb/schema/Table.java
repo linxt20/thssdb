@@ -1,6 +1,7 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
+import cn.edu.thssdb.storage.Cache;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
@@ -19,46 +20,36 @@ public class Table implements Iterable<Row> {
   private String databaseName;
   public String tableName;
   public ArrayList<Column> columns;
-  public BPlusTree<Entry, Row> index;
   private int primaryIndex;
+  public Cache cache;
+
+  // TODO 暂时不考虑锁，后面再补充
 
   public Table(String databaseName, String tableName, Column[] columns) {
     System.out.println("==========Table constructor=============");
-    // TODO 需要修改
+    this.lock = new ReentrantReadWriteLock();
     this.databaseName = databaseName;
     this.tableName = tableName;
-    this.columns = new ArrayList<>(Arrays.asList(columns));
-    for (int i = 0; i < this.columns.size(); i++) {
-      if (this.columns.get(i).getPrimary() == 1) primaryIndex = i;
+    this.columns = new ArrayList<>();
+    this.primaryIndex = -1;
+    for (int i = 0; i < columns.length; i++) {
+      this.columns.add(columns[i]);
+      if (columns[i].getPrimary() == 1) {
+        this.primaryIndex = i;
+      }
     }
-    if (primaryIndex < 0 || primaryIndex >= this.columns.size()) {
-      System.out.println("Primary key not exist");
-      // TODO throw new PrimaryNotExistException(tableName);
-    }
-    this.lock = new ReentrantReadWriteLock();
-
+    // TODO primaryIndex如果没有被更新需要抛出异常
+    this.cache = new Cache(databaseName, tableName);
     // TODO 一些后面要加的变量
-    // this.cache = new Cache(databaseName, tableName);
-    // this.s_lock_list = new ArrayList<>();
-    // this.x_lock_list = new ArrayList<>();
-    // this.tplock = 0;
     recover();
-  }
-
-  public String show() {
-    String ret = "------------------------------------------------------\n";
-    for (Column column : columns) {
-      ret += column.show() + "\n";
-    }
-    ret += "------------------------------------------------------\n";
-    return ret;
   }
 
   private void recover() {
     // TODO 需要修改
     File dir = new File(storage_dir);
     File[] fileList = dir.listFiles();
-    if (fileList == null) return;
+    if (fileList == null)
+      return;
 
     HashMap<Integer, File> pageFileList = new HashMap<>();
     int pageNum = 0;
@@ -75,7 +66,8 @@ public class Table implements Iterable<Row> {
           if (!(this.databaseName.equals(databaseName) && this.tableName.equals(tableName)))
             continue;
           pageFileList.put(id, f);
-          if (id > pageNum) pageNum = id;
+          if (id > pageNum)
+            pageNum = id;
         } catch (Exception e) {
           continue;
         }
@@ -115,7 +107,8 @@ public class Table implements Iterable<Row> {
 
       File dir = new File(storage_dir);
       File[] fileList = dir.listFiles();
-      if (fileList == null) return;
+      if (fileList == null)
+        return;
       for (File f : fileList) {
         if (f != null && f.isFile()) {
           try {
@@ -154,7 +147,7 @@ public class Table implements Iterable<Row> {
     private Iterator<Pair<Entry, Row>> iterator;
 
     TableIterator(Table table) {
-      this.iterator = table.index.iterator();
+      this.iterator = table.cache.getIndexIter();
     }
 
     @Override
