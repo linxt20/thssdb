@@ -10,7 +10,6 @@ public class CreateTablePlan extends LogicalPlan {
 
   public CreateTablePlan(String tableName, Column[] columns) {
     super(LogicalPlanType.CREATE_TABLE);
-    System.out.println("CreateDatabasePlan: [DEBUG] " + tableName);
     this.tableName = tableName;
     this.columns = columns;
   }

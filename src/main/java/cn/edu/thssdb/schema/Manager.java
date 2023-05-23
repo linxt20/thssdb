@@ -78,9 +78,9 @@ public class Manager {
     try {
       lock.writeLock().lock();
       if (!databases.containsKey(dbName)) throw new KeyNotExistException();
-      // TODO throw new DatabaseNotExistException(dbName);
+      // 调用 database.dropall() 删除对应的tables文件
+      databases.get(dbName).dropall();
       databases.remove(dbName);
-      // TODO 删除对应的文件夹（调用 database.dropSelf()
     } finally {
       lock.writeLock().unlock();
     }

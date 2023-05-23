@@ -6,11 +6,14 @@ import cn.edu.thssdb.plan.impl.*;
 import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.schema.Row;
+import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.StatusUtil;
 import org.apache.thrift.TException;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,6 +40,7 @@ public class IServiceHandler implements IService.Iface {
     return new DisconnectResp(StatusUtil.success());
   }
 
+  // TODO 加入SQLHandler处理sql报错，并且将req.statement根据;分割成多个statement分别进行处理
   @Override
   public ExecuteStatementResp executeStatement(ExecuteStatementReq req) throws TException {
     System.out.println("[DEBUG] sessionId: " + req.getSessionId());
@@ -100,6 +104,53 @@ public class IServiceHandler implements IService.Iface {
         String ret = Manager.getInstance().getCurrentDB().show(name.toLowerCase());
         return new ExecuteStatementResp(StatusUtil.success(ret), false);
 
+      case DROP_TABLE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        DropTablePlan dropTablePlan = (DropTablePlan) plan;
+        name = dropTablePlan.getTableName();
+        Manager.getInstance().getCurrentDB().drop(name.toLowerCase());
+        return new ExecuteStatementResp(StatusUtil.success("Table " + name + " dropped."), false);
+
+      case SELECT:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        SelectPlan selectPlan = (SelectPlan) plan;
+        String[] columnsName = selectPlan.getColumns();
+        ArrayList<String> tableNames = selectPlan.getTableNames();
+        QueryTable queryTable = null; // = selectPlan.getQueryTable();
+        Logic logicForJoin = selectPlan.getLogicForJoin();
+        Logic logic = selectPlan.getLogic();
+        Boolean distinct = selectPlan.getDistinct();
+        // 如果没有join，即为单一表查询
+        if (logicForJoin == null) {
+          if (tableNames.size() != 1) {
+            return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
+          }
+          queryTable = Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
+        }
+        // 如果是复合表，需要读取join逻辑
+        else {
+          queryTable = Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
+        }
+        String res = "";
+        try {
+          QueryResult result = Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
+          for (String column_name : result.mColumnName) {
+            // response.addToColumnsList(column_name);
+            res += column_name.toString() + ", ";
+          }
+          res += "\n------------------\n";
+          for (Row row : result.mResultList) {
+            ArrayList<String> the_result = row.toStringList();
+            String tmp = the_result.toString();
+            tmp = tmp.substring(1, tmp.length() - 1);
+            res += tmp+ "\n";
+          }
+          return new ExecuteStatementResp(StatusUtil.success(res), false);
+        } catch (Exception e) {
+          QueryResult error_result = new QueryResult(e.toString());
+          // return error_result;
+          return new ExecuteStatementResp(StatusUtil.fail("Exception"), false);
+        }
       case INSERT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         InsertPlan insertPlan = (InsertPlan) plan;
