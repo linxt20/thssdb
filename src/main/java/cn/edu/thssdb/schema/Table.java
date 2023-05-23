@@ -1,12 +1,9 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.DuplicateKeyException;
 import cn.edu.thssdb.exception.KeyNotExistException;
 import cn.edu.thssdb.exception.NullValueException;
-import cn.edu.thssdb.exception.SchemaLengthMismatchException;
-import cn.edu.thssdb.index.BPlusTree;
-import cn.edu.thssdb.exception.DuplicateKeyException;
 import cn.edu.thssdb.storage.Cache;
-import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
@@ -61,16 +58,25 @@ public class Table implements Iterable<Row> {
     }
     return row;
   }
+  // getprimaryname函数获取主键的名字
+  public String GetPrimaryName() {
+    if (this.primaryIndex < 0 || this.primaryIndex >= this.columns.size()) {
+      return null;
+    }
+    return this.columns.get(this.primaryIndex).getName();
+  }
+  // getprimaryindex函数获取主键的下标
+  public int GetPrimaryIndex() {
+    return this.primaryIndex;
+  }
 
   // recover函数从页式文件中读取table的行数据，恢复到内存中
   private void recover() {
     // 获取存储目录下的所有文件
     File dir = new File(storage_dir);
-    if (!dir.exists() || !dir.isDirectory())
-      return;
+    if (!dir.exists() || !dir.isDirectory()) return;
     File[] fileList = dir.listFiles();
-    if (fileList == null)
-      return;
+    if (fileList == null) return;
     // 遍历所有文件，找到属于该表的文件
     HashMap<Integer, File> pageFileList = new HashMap<>();
     int pageNum = 0; // 记录最大的页号
@@ -80,13 +86,11 @@ public class Table implements Iterable<Row> {
     for (File f : fileList) {
       if (f != null && f.isFile()) {
         Matcher matcher = pattern.matcher(f.getName());
-        if (!matcher.matches())
-          continue;
+        if (!matcher.matches()) continue;
         String[] parts = f.getName().split("\\.")[0].split("_");
         int id = Integer.parseInt(parts[3]);
         pageFileList.put(id, f);
-        if (id > pageNum)
-          pageNum = id;
+        if (id > pageNum) pageNum = id;
       }
     }
     // 从文件中读取数据 需要注意页号是从1开始的
@@ -106,187 +110,12 @@ public class Table implements Iterable<Row> {
     ret += "------------------------------------------------------";
     return ret;
   }
-
-  // 将table中的所有数据清空
-  public void dropall() {
-    try {
-      lock.writeLock().lock();
-      cache.drop_all();
-      cache = null;
-
-      File dir = new File(storage_dir);
-      File[] fileList = dir.listFiles();
-      if (fileList == null)
-        return;
-      for (File f : fileList) {
-        if (f != null && f.isFile()) {
-          try {
-            String[] parts = f.getName().split("\\.")[0].split("_");
-            String databaseName = parts[0];
-            String tableName = parts[1];
-            if (!(this.databaseName.equals(databaseName) && this.tableName.equals(tableName)))
-              continue;
-          } catch (Exception e) {
-            continue;
-          }
-          f.delete();
-        }
-      }
-
-      columns.clear();
-      columns = null;
-    } finally {
-      lock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * 描述：获得主键名称
-   * 参数：无
-   * 返回：主键名称，如果没有就null
-   */
-  public String GetPrimaryName() {
-    if (this.primaryIndex < 0 || this.primaryIndex >= this.columns.size()) {
-      return null;
-    }
-    return this.columns.get(this.primaryIndex).getName();
-  }
-
-  public Row get(Entry entry) {
-    if (entry == null)
-      throw new KeyNotExistException(null);
-
-    Row row;
-    try {
-      lock.readLock().lock();
-      row = cache.getRow(entry, primaryIndex);
-    } catch (KeyNotExistException e) {
-      throw e;
-    } finally {
-      lock.readLock().unlock();
-    }
-    return row;
-  }
-
-  public int GetPrimaryIndex() {
-    return this.primaryIndex;
-  }
-
-  /**
-   * 描述：用于sql parser的插入函数
-   * 参数：value数组，string形式
-   * 返回：无，如果不合法会抛出异常
-   */
-  public void insert(String[] values) {
-    if (values == null)
-      throw new SchemaLengthMismatchException(this.columns.size(), 0);
-
-    // match columns and reorder entries
-    int schemaLen = this.columns.size();
-    if(values.length > schemaLen) {
-      throw new SchemaLengthMismatchException(schemaLen, values.length);
-    }
-
-    ArrayList<Entry> orderedEntries = new ArrayList<>();
-    for (int i = 0; i < this.columns.size(); i ++)
-    {
-      Column column = this.columns.get(i);
-      Comparable the_entry_value = null;
-      if(i >= 0 && i < values.length) {
-        the_entry_value = ParseValue(column, values[i]);
-      }
-      JudgeValid(column, the_entry_value);
-      Entry the_entry = new Entry(the_entry_value);
-      orderedEntries.add(the_entry);
-    }
-
-    // write to cache
-    try {
-      lock.writeLock().lock();
-      cache.insertRow(orderedEntries, primaryIndex,false);
-    }
-    catch (DuplicateKeyException e) {
-      throw e;
-    }
-    finally {
-      lock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * 描述：用于sql parser的插入函数
-   * 参数：column数组，value数组，都是string形式
-   * 返回：无，如果不合法会抛出异常
-   */
-  public void insert(String[] columns, String[] values) {
-    if (columns == null || values == null)
-      throw new SchemaLengthMismatchException(this.columns.size(), 0);
-
-    // match columns and reorder entries
-    int schemaLen = this.columns.size();
-    if (columns.length > schemaLen) {
-      throw new SchemaLengthMismatchException(schemaLen, columns.length);
-    }
-    else if(values.length > schemaLen) {
-      throw new SchemaLengthMismatchException(schemaLen, values.length);
-    }
-    else if (columns.length != values.length) {
-      throw new SchemaLengthMismatchException(columns.length, values.length);
-    }
-    ArrayList<Entry> orderedEntries = new ArrayList<>();
-    for (Column column : this.columns)
-    {
-      int equal_num = 0;
-      int place = -1;
-      for (int i = 0; i < values.length; i++)
-      {
-        if (columns[i].equals(column.getName().toLowerCase()))
-        {
-          place = i;
-          equal_num ++;
-        }
-      }
-      if (equal_num > 1)
-      {
-        // throw new DuplicateColumnException(column.toString());
-      }
-      Comparable the_entry_value = null;
-      if (equal_num == 0 || place < 0 || place >= columns.length)
-      {
-        the_entry_value = null;
-      }
-      else{
-        the_entry_value = ParseValue(column, values[place]);
-      }
-      JudgeValid(column, the_entry_value);
-      Entry the_entry = new Entry(the_entry_value);
-      orderedEntries.add(the_entry);
-    }
-
-    // write to cache
-    try {
-      lock.writeLock().lock();
-      cache.insertRow(orderedEntries, primaryIndex,false);
-    }
-    catch (DuplicateKeyException e) {
-      throw e;
-    }
-    finally {
-      lock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * 描述：将string类型的value转换成column的类型
-   * 参数：column，value
-   * 返回：新的值--comparable，如果不匹配会抛出异常
-   */
+  // Parsevalue函数将字符串转化为对应的类型
   private Comparable ParseValue(Column the_column, String value) {
     if (value.equals("null")) {
       if (the_column.NotNull()) {
         throw new NullValueException(the_column.getName());
-      }
-      else {
+      } else {
         return null;
       }
     }
@@ -304,45 +133,55 @@ public class Table implements Iterable<Row> {
     }
     return null;
   }
+  // 这个insert插入的数据是自带顺序的，所以不需要重新排序，转化为Entry然后插入即可
+  public void insert(String[] value_list, boolean in_tran) {
+    if (value_list == null) return;
+    int len = this.columns.size(); // 当前表的列数
 
-
-  /**
-   * 描述：判断value是否合法，符合column规则，这里只判断null和max length
-   * 参数：column，value
-   * 返回：无，如果不合法会抛出异常
-   */
-  private void JudgeValid(Column the_column, Comparable new_value) {
-    boolean not_null = the_column.NotNull();
-    ColumnType the_type = the_column.getType();
-    int max_length = the_column.getMaxLength();
-    if(not_null == true && new_value == null) {
-      throw new NullValueException(the_column.getName());
+    if (value_list.length != len) {
+      throw new RuntimeException("insert value list length not match column length");
     }
-    if(the_type == ColumnType.STRING && new_value != null) {
-      if(max_length >= 0 && (new_value + "").length() > max_length) {
-        System.out.println("ValueLengthExceedException(the_column.getName())");
-        // throw new ValueLengthExceedException(the_column.getName());
-      }
+    ArrayList<Entry> orderedEntries = new ArrayList<>();
+    for (int i = 0; i < this.columns.size(); i++) {
+      Column column = this.columns.get(i);
+      Comparable the_entry_value = ParseValue(column, value_list[i]);
+      orderedEntries.add(new Entry(the_entry_value));
+    }
+    // write to cache
+    try {
+      lock.writeLock().lock();
+      cache.insertRow(orderedEntries, primaryIndex, in_tran);
+    } catch (DuplicateKeyException e) {
+      throw e;
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 
-  // TODO
-  // insert函数将传入的列数据按照当前table的列顺序插入到cache中
-  public void insert(ArrayList<Column> columns, ArrayList<Entry> entries, boolean in_tran) {
-    if (columns == null || entries == null)
-      return;
+  //   insert函数将传入的列数据按照当前table的列顺序插入到cache中
+  public void insert(String[] column_list, String[] value_list, boolean in_tran) {
+    if (column_list == null || value_list == null) return;
     int len = this.columns.size(); // 当前表的列数
-    if (columns.size() != len || entries.size() != len)
-      return;
+    if (column_list.length != len || value_list.length != len)
+      throw new RuntimeException("column_list.length != len || value_list.length != len");
+
     // 将entries按照当前table列的顺序排序
     ArrayList<Entry> entry_list_sorted = new ArrayList<>();
-    HashMap<Column, Integer> column_index = new HashMap<>();
+    HashMap<String, Integer> column_index = new HashMap<>();
     for (int i = 0; i < len; i++) {
-      column_index.put(this.columns.get(i), i);
+      if (column_index.get(column_list[i]) != null)
+        throw new RuntimeException("column_list中存在重复的列名");
+      column_index.put(column_list[i], i);
     }
     for (Column column : this.columns) {
-      int index = column_index.get(column);
-      entry_list_sorted.add(entries.get(index));
+      Integer index = column_index.get(column.getName());
+      Comparable the_entry_value = null;
+      if (index != null) {
+        the_entry_value = ParseValue(column, value_list[index]);
+      } else {
+        the_entry_value = ParseValue(column, "null");
+      }
+      entry_list_sorted.add(new Entry(the_entry_value));
     }
     // 将这个entry_list_sorted插入到cache中
     try {
@@ -358,8 +197,7 @@ public class Table implements Iterable<Row> {
   // delete函数删除主键值所对应的行
   // TODO 后续考虑加入选择逻辑
   public void delete(Entry primary_entry, boolean in_tran) {
-    if (primary_entry == null)
-      return;
+    if (primary_entry == null) return;
     try {
       lock.writeLock().lock();
       cache.deleteRow(primary_entry, primaryIndex, in_tran);
@@ -367,7 +205,6 @@ public class Table implements Iterable<Row> {
       lock.writeLock().unlock();
     }
   }
-
   // update函数更新主键值所对应的行
   // TODO 后续考虑加入选择逻辑
   public void update(
@@ -407,8 +244,7 @@ public class Table implements Iterable<Row> {
 
       File dir = new File(storage_dir);
       File[] fileList = dir.listFiles();
-      if (fileList == null)
-        return;
+      if (fileList == null) return;
       // 这个正则表达式需要在page_database_table_pageid.data和meta_database_table.data这两种文件中匹配database_table符合要求的文件
       String regex = "^(page|meta)_" + databaseName + "_" + tableName + "(_\\d+)?\\.data$";
       Pattern pattern = Pattern.compile(regex);

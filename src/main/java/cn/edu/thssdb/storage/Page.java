@@ -17,7 +17,8 @@ public class Page {
   public Page(String Name, int id) {
     this.id = id;
     size = 0;
-    disk_filename = "page_" + Name + "_" + id + ".data";
+    disk_filename =
+        "page_" + Name + "_" + id + ".data"; // 存储数据的文件名 格式为 page_database_table_pageid.data
     entry_list = new ArrayList<>();
     time_stamp = System.currentTimeMillis();
     edited = false;
