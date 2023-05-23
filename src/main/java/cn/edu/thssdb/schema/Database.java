@@ -224,6 +224,16 @@ public class Database {
     }
   }
 
+  public String update(String table_name, String column_name, Comparer value, Logic the_logic) {
+    Table the_table = get(table_name);
+    return the_table.update(column_name, value, the_logic);
+  }
+
+  public String delete(String table_name, Logic the_logic) {
+    Table table = get(table_name);
+    return table.delete(the_logic);
+  }
+
   private void recover() {
     File dir = new File(storage_dir);
     if (!dir.exists() || !dir.isDirectory()) return;
