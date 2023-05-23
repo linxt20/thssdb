@@ -161,6 +161,16 @@ public class Database {
     return new JointTable(my_tables, logic);
   }
 
+  /**
+   * 描述：处理更新元素
+   * 参数：table name，待更新的单一列名，待更新的值，符合条件
+   * 返回：描述性语句
+   */
+  public String update(String table_name, String column_name, Comparer value, Logic the_logic) {
+    Table the_table = get(table_name);
+    return the_table.update(column_name, value, the_logic);
+  }
+
   public QueryResult select(String[] columnsProjected, QueryTable the_table, Logic select_logic, boolean distinct) {
     try {
 

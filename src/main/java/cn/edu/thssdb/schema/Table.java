@@ -1,10 +1,8 @@
 package cn.edu.thssdb.schema;
 
-import cn.edu.thssdb.exception.KeyNotExistException;
-import cn.edu.thssdb.exception.NullValueException;
-import cn.edu.thssdb.exception.SchemaLengthMismatchException;
+import cn.edu.thssdb.exception.*;
 import cn.edu.thssdb.index.BPlusTree;
-import cn.edu.thssdb.exception.DuplicateKeyException;
+import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.storage.Cache;
 import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Pair;
@@ -272,6 +270,148 @@ public class Table implements Iterable<Row> {
       throw e;
     }
     finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * 描述：将comparer类型的value转换成column的类型
+   * 参数：column，value
+   * 返回：新的值--comparable，如果不匹配会抛出异常
+   * 如果value是null,判断是否符合可空规则
+   * 如果value是column，报错
+   * 如果column是数字，value是string，或者相反，报错
+   * 如果column和value都是数字，value强制类型转换成column类型，比如你把id：int改成5.01，那变成5
+   */
+  private Comparable ParseValue(Column the_column, Comparer value) {
+    if (value == null || value.mValue == null ||value.mType == ComparerType.NULL) {
+      if (the_column.NotNull()) {
+        throw new NullValueException(the_column.getName());
+      }
+      else {
+        return null;
+      }
+    }
+    String string_value = value.mValue + "";
+    if(value.mType == ComparerType.COLUMN) {
+      if(the_column.getType().equals(ColumnType.STRING)) {
+        // throw new TypeNotMatchException(ComparerType.COLUMN, ComparerType.STRING);
+      }
+      else {
+        // throw new TypeNotMatchException(ComparerType.COLUMN, ComparerType.NUMBER);
+      }
+    }
+
+    switch (the_column.getType()) {
+      case DOUBLE:
+        if(value.mType == ComparerType.STRING) {
+          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+        }
+        return Double.parseDouble(string_value);
+      case INT:
+        if(value.mType == ComparerType.STRING) {
+          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+        }
+        double double_value = Double.parseDouble(string_value);
+        int int_value = (int)double_value;
+        return Integer.parseInt(int_value + "");
+      case FLOAT:
+        if(value.mType == ComparerType.STRING) {
+          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+        }
+        return Float.parseFloat(string_value);
+      case LONG:
+        if(value.mType == ComparerType.STRING) {
+          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+        }
+        double double_value_2 = Double.parseDouble(string_value);
+        long long_value = (long)double_value_2;
+        return Long.parseLong(long_value + "");
+      case STRING:
+        if(value.mType == ComparerType.NUMBER) {
+          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+        }
+        return string_value;
+    }
+    return null;
+  }
+
+
+  /**
+   * 描述：用于sql parser的更新函数
+   * 参数：待更新列名，待更新值（string类型），逻辑
+   * 返回：字符串，表明更新了多少数据
+   */
+  public String update(String column_name, Comparer value, Logic the_logic) {
+    int count = 0;
+    for(Row row : this) {
+      JointRow the_row = new JointRow(row, this);
+      if(the_logic == null || the_logic.GetResult(the_row) == ResultType.TRUE) {
+        Entry primary_entry = row.getEntries().get(primaryIndex);
+        //找到对应column
+        boolean whether_find = false;
+        Column the_column = null;
+        for(Column column : this.columns) {
+          if(column.getName().equals(column_name)) {
+            the_column = column;
+            whether_find = true;
+            break;
+          }
+        }
+        if(the_column == null || whether_find == false) {
+          // throw new AttributeNotFoundException(column_name);
+        }
+
+        //值处理，合法性判断
+        Comparable the_entry_value = ParseValue(the_column, value);
+
+        JudgeValid(the_column, the_entry_value);
+
+        //插入
+        Entry the_entry = new Entry(the_entry_value);
+        ArrayList<Column> the_column_list = new ArrayList<>();
+        the_column_list.add(the_column);
+        ArrayList<Entry> the_entry_list = new ArrayList<>();
+        the_entry_list.add(the_entry);
+        update(primary_entry, the_column_list, the_entry_list);
+        count ++;
+      }
+    }
+    return "Updated " + count + " items.";
+  }
+
+  public void update(Entry primaryEntry, ArrayList<Column> columns, ArrayList<Entry> entries) {
+//        System.out.println("updatet");
+    if (primaryEntry == null || columns == null || entries == null)
+      throw new KeyNotExistException(null);
+
+    int targetKeys[] = new int[columns.size()];
+    int i = 0;
+    int tableColumnSize = this.columns.size();
+    for (Column column : columns)
+    {
+      boolean isMatched = false;
+      for (int j = 0; j < tableColumnSize; j++)
+      {
+        if (column.equals(this.columns.get(j)))
+        {
+          targetKeys[i] = j;
+          isMatched = true;
+          break;
+        }
+      }
+      if (!isMatched)
+        throw new KeyNotExistException(column.toString());
+      i++;
+    }
+
+    try {
+      lock.writeLock().lock();
+      cache.updateRow(primaryEntry, primaryIndex, targetKeys, entries, false);
+    }
+    catch (KeyNotExistException | DuplicateKeyException e) {
+      throw e;
+    } finally {
       lock.writeLock().unlock();
     }
   }

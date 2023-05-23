@@ -3,6 +3,7 @@ package cn.edu.thssdb.service;
 import cn.edu.thssdb.plan.LogicalGenerator;
 import cn.edu.thssdb.plan.LogicalPlan;
 import cn.edu.thssdb.plan.impl.*;
+import cn.edu.thssdb.query.Comparer;
 import cn.edu.thssdb.query.Logic;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
@@ -143,11 +144,12 @@ public class IServiceHandler implements IService.Iface {
         else {
           queryTable = Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
         }
+
+        // TODO 后面要进行字符串处理哈哈哈哈这个太随便了
         String res = "";
         try {
           QueryResult result = Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
           for (String column_name : result.mColumnName) {
-            // response.addToColumnsList(column_name);
             res += column_name.toString() + ", ";
           }
           res += "\n------------------\n";
@@ -183,7 +185,19 @@ public class IServiceHandler implements IService.Iface {
           }
         }
         return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
-
+      case UPDATE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        UpdatePlan updatePlan = (UpdatePlan) plan;
+        String table_name_for_update = updatePlan.getTableName();
+        String column_name_for_update = updatePlan.getColumnName();
+        Comparer value_for_update = updatePlan.getValue();
+        Logic logic_for_update = updatePlan.getLogic();
+        try {
+          Manager.getInstance().getCurrentDB().update(table_name_for_update, column_name_for_update, value_for_update, logic_for_update);
+        } catch (Exception e) {
+          System.out.println(e.getMessage());
+        }
+        return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
       default:
     }
     return null;

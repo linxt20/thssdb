@@ -104,6 +104,90 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
   }
 
   /**
+   * 描述：处理更新元素
+   */
+  public LogicalPlan visitUpdateStmt(SQLParser.UpdateStmtContext ctx) {
+    String table_name = ctx.tableName().getText().toLowerCase();
+    String column_name = ctx.columnName().getText().toLowerCase();
+    Comparer value = visit_expression(ctx.expression());
+    if (ctx.K_WHERE() == null) {
+      // 直接返回
+//      try {
+//        return the_database.update(table_name, column_name, value, null);
+//      } catch (Exception e) {
+//        return e.toString();
+//      }
+      return new UpdatePlan(table_name, column_name, value, null);
+    }
+    Logic logic = visitMultiple_condition(ctx.multipleCondition());
+    /* 处理锁
+    if(manager.transaction_sessions.contains(session))
+    {
+      Table the_table = the_database.get(table_name);
+      while(true)
+      {
+        if(!manager.session_queue.contains(session))   //新加入一个session
+        {
+          int get_lock = the_table.get_x_lock(session);
+          if(get_lock!=-1)
+          {
+            if(get_lock==1)
+            {
+              ArrayList<String> tmp = manager.x_lock_dict.get(session);
+              tmp.add(table_name);
+              manager.x_lock_dict.put(session,tmp);
+            }
+            break;
+          }else
+          {
+            manager.session_queue.add(session);
+          }
+        }else    //之前等待的session
+        {
+          if(manager.session_queue.get(0)==session)  //只查看阻塞队列开头session
+          {
+            int get_lock = the_table.get_x_lock(session);
+            if(get_lock!=-1)
+            {
+              if(get_lock==1)
+              {
+                ArrayList<String> tmp = manager.x_lock_dict.get(session);
+                tmp.add(table_name);
+                manager.x_lock_dict.put(session,tmp);
+              }
+              manager.session_queue.remove(0);
+              break;
+            }
+          }
+        }
+        try
+        {
+          //System.out.print("session: "+session+": ");
+          //System.out.println(manager.session_queue);
+          Thread.sleep(500);   // 休眠3秒
+        } catch (Exception e) {
+          System.out.println("Got an exception!");
+        }
+      }
+
+      try {
+        return the_table.update(column_name, value, logic);
+      } catch (Exception e) {
+        return e.toString();
+      }
+    }
+     */
+    //else{
+//      try {
+//        return the_database.update(table_name, column_name, value, logic);
+//      } catch (Exception e) {
+//        return e.toString();
+//      }
+    //}
+    return new UpdatePlan(table_name, column_name, value, logic);
+  }
+
+  /**
    * 描述：本应该是得到算术表达式，但是因为没有实现算术表达式，所以直接返回数值
    */
   public Comparer visit_expression(SQLParser.ExpressionContext ctx) {
