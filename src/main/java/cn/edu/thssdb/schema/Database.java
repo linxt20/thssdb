@@ -30,7 +30,7 @@ public class Database {
     System.out.println("Database persist");
     // TODO 需要修改
     for (Table table : tables.values()) {
-      String filename = storage_dir + name + "_" + table.tableName + "_meta.data";
+      String filename = storage_dir + "meta_" + name + "_" + table.tableName + ".data";
       ArrayList<Column> columns = table.columns;
       try {
         FileOutputStream fos = new FileOutputStream(filename);
@@ -80,11 +80,8 @@ public class Database {
       // TODO throw new TableNotExistException(name);
       String metaFilename = storage_dir + this.name + "_" + name + "_meta.data";
       File metaFile = new File(metaFilename);
-      if (metaFile.isFile()) {
-        System.out.println("Database drop, delete meta file " + metaFilename);
+      if (metaFile.isFile())
         metaFile.delete();
-      }
-      // 调用table中的函数删除数据
       Table table = tables.get(name);
       table.dropall();
       // 将table从database中删除
@@ -164,15 +161,46 @@ public class Database {
     return new JointTable(my_tables, logic);
   }
 
-
   public QueryResult select(String[] columnsProjected, QueryTable the_table, Logic select_logic, boolean distinct) {
     try {
-      String result_string = "";
+
       lock.readLock().lock();
       the_table.SetLogicSelect(select_logic);
       QueryResult query_result = new QueryResult(the_table, columnsProjected, distinct);
       query_result.GenerateQueryRecords();
       return query_result;
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+  public void insert(String tableName, String[] column_names, String[] values) {
+    System.out.println("Database insert");
+    // TODO 需要修改
+    try {
+      Table table = get(tableName);
+      if (column_names == null) {
+        for(int i = 0; i < values.length; i++) {
+          System.out.println("Database insert, " + values[i]);
+        }
+        table.insert(values);
+      } else {
+        for(int i = 0; i < values.length; i++) {
+          System.out.println("Database insert, " + values[i]);
+        }
+        table.insert(column_names, values);
+      }
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  public Table get(String name) {
+    try {
+      lock.readLock().lock(); // TODO 为什么是read？
+      if (!tables.containsKey(name)) {
+        throw new KeyNotExistException();
+      }
+      return tables.get(name);
     } finally {
       lock.readLock().unlock();
     }

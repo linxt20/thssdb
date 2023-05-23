@@ -20,12 +20,14 @@ import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.StatusUtil;
 import org.apache.thrift.TException;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class IServiceHandler implements IService.Iface {
@@ -122,7 +124,6 @@ public class IServiceHandler implements IService.Iface {
         return new ExecuteStatementResp(StatusUtil.success("Table " + name + " dropped."), false);
 
       case SELECT:
-        ExecuteStatementResp response = new ExecuteStatementResp();
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         SelectPlan selectPlan = (SelectPlan) plan;
         String[] columnsName = selectPlan.getColumns();
@@ -132,8 +133,8 @@ public class IServiceHandler implements IService.Iface {
         Logic logic = selectPlan.getLogic();
         Boolean distinct = selectPlan.getDistinct();
         // 如果没有join，即为单一表查询
-        if(logicForJoin == null) {
-          if(tableNames.size() != 1){
+        if (logicForJoin == null) {
+          if (tableNames.size() != 1) {
             return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
           }
           queryTable = Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
@@ -142,25 +143,47 @@ public class IServiceHandler implements IService.Iface {
         else {
           queryTable = Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
         }
-        response.setStatus(new Status(Global.SUCCESS_CODE));
+        String res = "";
         try {
           QueryResult result = Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
-          for(Row row : result.mResultList) {
+          for (String column_name : result.mColumnName) {
+            // response.addToColumnsList(column_name);
+            res += column_name.toString() + ", ";
+          }
+          res += "\n------------------\n";
+          for (Row row : result.mResultList) {
             ArrayList<String> the_result = row.toStringList();
-            response.addToRowList(the_result);
+            String tmp = the_result.toString();
+            tmp = tmp.substring(1, tmp.length() - 1);
+            res += tmp+ "\n";
           }
-          if(response.isSetRowList() == false) {
-            response.rowList = new ArrayList<>();
-          }
-          for(String column_name: result.mColumnName) {
-            response.addToColumnsList(column_name);
-          }
-          return response;
+          return new ExecuteStatementResp(StatusUtil.success(res), false);
         } catch (Exception e) {
           QueryResult error_result = new QueryResult(e.toString());
-          //return error_result;
+          // return error_result;
           return new ExecuteStatementResp(StatusUtil.fail("Exception"), false);
         }
+      case INSERT:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        InsertPlan insertPlan = (InsertPlan) plan;
+        // TODO read commit锁 目前先不加
+        String table_name = insertPlan.getTableName();
+        String[] column_names = insertPlan.getColumnNames();
+        List<SQLParser.ValueEntryContext> value_entrys = insertPlan.getValueEntryContextList();
+        for (SQLParser.ValueEntryContext value_entry : value_entrys) {
+          int size = value_entry.literalValue().size();
+          String[] values = new String[size];
+          for (int i = 0; i < size; i++) {
+            values[i] = value_entry.literalValue(i).getText();
+          }
+          try {
+            Manager.getInstance().getCurrentDB().insert(table_name, column_names, values);
+          } catch (Exception e) {
+            System.out.println(e.getMessage());
+          }
+        }
+        return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
+
       default:
     }
     return null;

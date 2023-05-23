@@ -6,7 +6,7 @@ import java.util.ArrayList;
 
 public class Page {
   public static final int maxSize = 2048;
-  private int id; // 页式存储
+  private int id; // 每个页的id
   private int size; // 页面的实际大小
   private ArrayList<Entry> entry_list; // 这是行的主键，能够唯一表示这一行
   private String disk_filename; // 页面存储在磁盘当中的文件名
@@ -17,7 +17,7 @@ public class Page {
   public Page(String Name, int id) {
     this.id = id;
     size = 0;
-    disk_filename = Name + "_" + id + "_page.data";
+    disk_filename = "page_" + Name + "_" + id + ".data";
     entry_list = new ArrayList<>();
     time_stamp = System.currentTimeMillis();
     edited = false;
