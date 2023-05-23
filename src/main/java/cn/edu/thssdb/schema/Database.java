@@ -75,13 +75,11 @@ public class Database {
     // TODO 需要修改
     try {
       lock.writeLock().lock();
-      if (!tables.containsKey(name))
-        throw new KeyNotExistException();
+      if (!tables.containsKey(name)) throw new KeyNotExistException();
       // TODO throw new TableNotExistException(name);
       String metaFilename = storage_dir + this.name + "_" + name + "_meta.data";
       File metaFile = new File(metaFilename);
-      if (metaFile.isFile())
-        metaFile.delete();
+      if (metaFile.isFile()) metaFile.delete();
       Table table = tables.get(name);
       table.dropall();
       // 将table从database中删除
@@ -100,8 +98,7 @@ public class Database {
       final String filenameSuffix = "_meta.data";
       for (Table table : tables.values()) {
         File metaFile = new File(filenamePrefix + table.tableName + filenameSuffix);
-        if (metaFile.isFile())
-          metaFile.delete();
+        if (metaFile.isFile()) metaFile.delete();
         table.dropSelf();
       }
       tables.clear();
@@ -115,8 +112,7 @@ public class Database {
   public String show(String tableName) {
     try {
       lock.readLock().lock();
-      if (!tables.containsKey(tableName))
-        throw new KeyNotExistException();
+      if (!tables.containsKey(tableName)) throw new KeyNotExistException();
       Table table = tables.get(tableName);
       return table.show();
     } finally {
@@ -124,11 +120,7 @@ public class Database {
     }
   }
 
-  /**
-   * 描述：建立单一querytable
-   * 参数：table name
-   * 返回：querytable
-   */
+  /** 描述：建立单一querytable 参数：table name 返回：querytable */
   public QueryTable BuildSingleQueryTable(String table_name) {
     try {
       lock.readLock().lock();
@@ -141,18 +133,13 @@ public class Database {
     throw new KeyNotExistException();
   }
 
-  /**
-   * 描述：建立复合querytable
-   * 参数：table names，join逻辑
-   * 返回：querytable
-   */
+  /** 描述：建立复合querytable 参数：table names，join逻辑 返回：querytable */
   public QueryTable BuildJointQueryTable(ArrayList<String> table_names, Logic logic) {
     ArrayList<Table> my_tables = new ArrayList<>();
     try {
       lock.readLock().lock();
       for (String table_name : table_names) {
-        if (!tables.containsKey(table_name))
-          throw new KeyNotExistException();
+        if (!tables.containsKey(table_name)) throw new KeyNotExistException();
         my_tables.add(tables.get(table_name));
       }
     } finally {
@@ -183,18 +170,19 @@ public class Database {
       lock.readLock().unlock();
     }
   }
+
   public void insert(String tableName, String[] column_names, String[] values) {
     System.out.println("Database insert");
     // TODO 需要修改
     try {
       Table table = get(tableName);
       if (column_names == null) {
-        for(int i = 0; i < values.length; i++) {
+        for (int i = 0; i < values.length; i++) {
           System.out.println("Database insert, " + values[i]);
         }
         table.insert(values);
       } else {
-        for(int i = 0; i < values.length; i++) {
+        for (int i = 0; i < values.length; i++) {
           System.out.println("Database insert, " + values[i]);
         }
         table.insert(column_names, values);
@@ -214,6 +202,11 @@ public class Database {
     } finally {
       lock.readLock().unlock();
     }
+  }
+
+  public String delete(String table_name, Logic the_logic) {
+    Table table = get(table_name);
+    return table.delete(the_logic);
   }
 
   private void recover() {

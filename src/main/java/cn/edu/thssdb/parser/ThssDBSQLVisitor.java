@@ -22,8 +22,6 @@ import cn.edu.thssdb.plan.LogicalPlan;
 import cn.edu.thssdb.plan.impl.*;
 import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
-import cn.edu.thssdb.schema.Database;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLBaseVisitor;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.type.ColumnType;
@@ -191,21 +189,17 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
    * 描述：本应该是得到算术表达式，但是因为没有实现算术表达式，所以直接返回数值
    */
   public Comparer visit_expression(SQLParser.ExpressionContext ctx) {
-    if (ctx.comparer() != null)
-      return visit_comparer(ctx.comparer());
-    else
-      return null;
+    if (ctx.comparer() != null) return visit_comparer(ctx.comparer());
+    else return null;
   }
 
-  /**
-   *描述：读取一个comparer，值+类型
-   */
+  /** 描述：读取一个comparer，值+类型 */
   public Comparer visit_comparer(SQLParser.ComparerContext ctx) {
-    //处理column情况
+    // 处理column情况
     if (ctx.columnFullName() != null) {
       return new Comparer(ComparerType.COLUMN, ctx.columnFullName().getText());
     }
-    //获得类型和内容
+    // 获得类型和内容
     LiteralType type = visitLiteral_value(ctx.literalValue());
     String text = ctx.literalValue().getText();
     switch (type) {
@@ -220,9 +214,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     }
   }
 
-  /**
-   *描述：获取单一数值的类型
-   */
+  /** 描述：获取单一数值的类型 */
   public LiteralType visitLiteral_value(SQLParser.LiteralValueContext ctx) {
     if (ctx.NUMERIC_LITERAL() != null) {
       return LiteralType.NUMBER;
@@ -236,70 +228,57 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     return null;
   }
 
-  /**
-   * 描述：处理逻辑建立
-   */
+  /** 描述：处理逻辑建立 */
   public Condition visitCondition1(SQLParser.ConditionContext ctx) {
     Comparer left = visit_expression(ctx.expression(0));
     Comparer right = visit_expression(ctx.expression(1));
-    ConditionType type = null;// visitComparator(ctx.comparator());
+    ConditionType type = null; // visitComparator(ctx.comparator());
     if (ctx.comparator().EQ() != null) {
       type = ConditionType.EQ;
-    }
-    else if (ctx.comparator().NE() != null) {
+    } else if (ctx.comparator().NE() != null) {
       type = ConditionType.NE;
-    }
-    else if (ctx.comparator().GT() != null) {
+    } else if (ctx.comparator().GT() != null) {
       type = ConditionType.GT;
-    }
-    else if (ctx.comparator().LT() != null) {
+    } else if (ctx.comparator().LT() != null) {
       type = ConditionType.LT;
-    }
-    else if (ctx.comparator().GE() != null) {
+    } else if (ctx.comparator().GE() != null) {
       type = ConditionType.GE;
-    }
-    else if (ctx.comparator().LE() != null) {
+    } else if (ctx.comparator().LE() != null) {
       type = ConditionType.LE;
     }
     return new Condition(left, right, type);
   }
 
-  /**
-   *描述：处理复合逻辑
-   */
+  /** 描述：处理复合逻辑 */
   public Logic visitMultiple_condition(SQLParser.MultipleConditionContext ctx) {
-    //单一条件
+    // 单一条件
     Object a = ctx.multipleCondition(0);
     Object b = ctx.AND();
-    if (ctx.condition() != null)
-      return new Logic(visitCondition1(ctx.condition()));
+    if (ctx.condition() != null) return new Logic(visitCondition1(ctx.condition()));
 
-    //复合逻辑
+    // 复合逻辑
     LogicType logic_type;
     if (ctx.AND() != null) {
       logic_type = LogicType.AND;
-    }
-    else {
+    } else {
       logic_type = LogicType.OR;
     }
-    return new Logic(visitMultiple_condition(ctx.multipleCondition(0)),
-            visitMultiple_condition(ctx.multipleCondition(1)), logic_type);
+    return new Logic(
+        visitMultiple_condition(ctx.multipleCondition(0)),
+        visitMultiple_condition(ctx.multipleCondition(1)),
+        logic_type);
   }
 
-
-  /**
-   * 描述：处理查询元素
-   */
+  /** 描述：处理查询元素 */
   @Override
   public LogicalPlan visitSelectStmt(SQLParser.SelectStmtContext ctx) {
     System.out.println("visitSelectStmt");
     boolean distinct = false;
-    if (ctx.K_DISTINCT() != null)
-      distinct = true;
+    if (ctx.K_DISTINCT() != null) distinct = true;
     int columnSize = ctx.resultColumn().size();
     String[] columnsSelected = new String[columnSize];
-    //获取select的列名
-    for (int i = 0; i < columnSize ; i++) {
+    // 获取select的列名
+    for (int i = 0; i < columnSize; i++) {
       String columnName = ctx.resultColumn(i).getText().toLowerCase();
       if (columnName.equals("*")) {
         // 如果输入的是select *，则将columnsSelected置为null  g4文件能够接受非字母输入吗？？？
@@ -309,20 +288,21 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       columnsSelected[i] = columnName;
     }
 
-    //获取from的table，建立querytable
+    // 获取from的table，建立querytable
     int query_count = ctx.tableQuery().size();
-    if(query_count == 0) {
+    if (query_count == 0) {
       // throw new NoSelectedTableException();
       System.out.println("Error: no selected table");
     }
     ArrayList<String> table_names = new ArrayList<>();
     Logic logicForJoin = null;
     try {
-      //System.out.println("table names: " + ctx.tableQuery());
+      // System.out.println("table names: " + ctx.tableQuery());
       // 如果没有join，即为单一表
       if (ctx.tableQuery(0).K_JOIN().size() == 0) {
         table_names.add(ctx.tableQuery(0).tableName(0).getText().toLowerCase());
-        //the_query_table = the_database.BuildSingleQueryTable(ctx.tableQuery(0).table_name(0).getText().toLowerCase());
+        // the_query_table =
+        // the_database.BuildSingleQueryTable(ctx.tableQuery(0).table_name(0).getText().toLowerCase());
       }
       // 如果是复合表，需要读取join逻辑
       else {
@@ -330,16 +310,15 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
         for (SQLParser.TableNameContext subCtx : ctx.tableQuery(0).tableName()) {
           table_names.add(subCtx.getText().toLowerCase());
         }
-        //the_query_table = the_database.BuildJointQueryTable(table_names, logicForJoin);
+        // the_query_table = the_database.BuildJointQueryTable(table_names, logicForJoin);
       }
     } catch (Exception e) {
       // QueryResult error_result = new QueryResult(e.toString());
       // return error_result;
     }
-    //建立逻辑，获得结果
+    // 建立逻辑，获得结果
     Logic logic = null;
-    if (ctx.K_WHERE() != null)
-      logic = visitMultiple_condition(ctx.multipleCondition());
+    if (ctx.K_WHERE() != null) logic = visitMultiple_condition(ctx.multipleCondition());
     /*
     if(manager.transaction_sessions.contains(session))
     {
@@ -411,16 +390,16 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       }
     }*/
 
-    //else
-    //{
-    return new SelectPlan(table_names,columnsSelected, logicForJoin, logic, distinct);
-//      try {
-//        return new SelectPlan(columnsSelected, the_query_table, logic, distinct);
-//      } catch (Exception e) {
-//        QueryResult error_result = new QueryResult(e.toString());
-//        return error_result;
-//      }
-    //}
+    // else
+    // {
+    return new SelectPlan(table_names, columnsSelected, logicForJoin, logic, distinct);
+    //      try {
+    //        return new SelectPlan(columnsSelected, the_query_table, logic, distinct);
+    //      } catch (Exception e) {
+    //        QueryResult error_result = new QueryResult(e.toString());
+    //        return error_result;
+    //      }
+    // }
   }
 
   // 描述：读取列定义中的信息---名字，类型，是否主键，是否非空，最大长度
@@ -579,12 +558,84 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   }
 
-  public String[] visitValue_entry6(SQLParser.ValueEntryContext ctx) {
-    String[] values = new String[ctx.literalValue().size()];
-    for (int i = 0; i < ctx.literalValue().size(); i++) {
-      values[i] = ctx.literalValue(i).getText();
+  @Override
+  public LogicalPlan visitDeleteStmt(SQLParser.DeleteStmtContext ctx) {
+    String table_name = ctx.tableName().getText().toLowerCase();
+    // TODO null的处理
+    if (ctx.K_WHERE() == null) {
+      try {
+        return new DeletePlan(table_name, null);
+      } catch (Exception e) {
+        System.out.println(e.getMessage());
+      }
     }
-    return values;
+    Logic logic = visitMultiple_condition(ctx.multipleCondition());
+    return new DeletePlan(table_name, logic);
+    // TODO 并发控制
+    //    if(manager.transaction_sessions.contains(session))
+    //    {
+    //      //manager.session_queue.add(session);
+    //      Table the_table = the_database.get(table_name);
+    //      while(true)
+    //      {
+    //        if(!manager.session_queue.contains(session))   //新加入一个session
+    //        {
+    //          int get_lock = the_table.get_x_lock(session);
+    //          if(get_lock!=-1)
+    //          {
+    //            if(get_lock==1)
+    //            {
+    //              ArrayList<String> tmp = manager.x_lock_dict.get(session);
+    //              tmp.add(table_name);
+    //              manager.x_lock_dict.put(session,tmp);
+    //            }
+    //            break;
+    //          }else
+    //          {
+    //            manager.session_queue.add(session);
+    //          }
+    //        }else    //之前等待的session
+    //        {
+    //          if(manager.session_queue.get(0)==session)  //只查看阻塞队列开头session
+    //          {
+    //            int get_lock = the_table.get_x_lock(session);
+    //            if(get_lock!=-1)
+    //            {
+    //              if(get_lock==1)
+    //              {
+    //                ArrayList<String> tmp = manager.x_lock_dict.get(session);
+    //                tmp.add(table_name);
+    //                manager.x_lock_dict.put(session,tmp);
+    //              }
+    //              manager.session_queue.remove(0);
+    //              break;
+    //            }
+    //          }
+    //        }
+    //        try
+    //        {
+    //          //System.out.print("session: "+session+": ");
+    //          //System.out.println(manager.session_queue);
+    //          Thread.sleep(500);   // 休眠3秒
+    //        } catch (Exception e) {
+    //          System.out.println("Got an exception!");
+    //        }
+    //      }
+    //
+    //      try {
+    //        return the_table.delete(logic);
+    //      } catch (Exception e) {
+    //        return e.toString();
+    //      }
+    //
+    //    }
+    //    else{
+    //      try {
+    //        return the_database.delete(table_name, logic);
+    //      } catch (Exception e) {
+    //        return e.toString();
+    //      }
+    //    }
   }
 
   // TODO: parser to more logical plan

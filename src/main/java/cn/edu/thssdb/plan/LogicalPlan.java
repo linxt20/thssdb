@@ -23,5 +23,6 @@ public abstract class LogicalPlan {
     SELECT,
     INSERT,
     UPDATE,
+    DELETE,
   }
 }

@@ -7,20 +7,10 @@ import cn.edu.thssdb.query.Comparer;
 import cn.edu.thssdb.query.Logic;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
-import cn.edu.thssdb.rpc.thrift.ConnectReq;
-import cn.edu.thssdb.rpc.thrift.ConnectResp;
-import cn.edu.thssdb.rpc.thrift.DisconnectReq;
-import cn.edu.thssdb.rpc.thrift.DisconnectResp;
-import cn.edu.thssdb.rpc.thrift.ExecuteStatementReq;
-import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
-import cn.edu.thssdb.rpc.thrift.GetTimeReq;
-import cn.edu.thssdb.rpc.thrift.GetTimeResp;
-import cn.edu.thssdb.rpc.thrift.IService;
-import cn.edu.thssdb.rpc.thrift.Status;
+import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Row;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.StatusUtil;
@@ -157,7 +147,7 @@ public class IServiceHandler implements IService.Iface {
             ArrayList<String> the_result = row.toStringList();
             String tmp = the_result.toString();
             tmp = tmp.substring(1, tmp.length() - 1);
-            res += tmp+ "\n";
+            res += tmp + "\n";
           }
           return new ExecuteStatementResp(StatusUtil.success(res), false);
         } catch (Exception e) {
@@ -193,11 +183,24 @@ public class IServiceHandler implements IService.Iface {
         Comparer value_for_update = updatePlan.getValue();
         Logic logic_for_update = updatePlan.getLogic();
         try {
-          Manager.getInstance().getCurrentDB().update(table_name_for_update, column_name_for_update, value_for_update, logic_for_update);
+          Manager.getInstance().getCurrentDB().update(table_name_for_update, column_name_for_update, value_for_update,
+              logic_for_update);
         } catch (Exception e) {
           System.out.println(e.getMessage());
         }
         return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
+      case DELETE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        DeletePlan deletePlan = (DeletePlan) plan;
+        String delete_table_name = deletePlan.getTableName();
+        Logic delete_logic = deletePlan.getCondition();
+        try {
+          Manager.getInstance().getCurrentDB().delete(delete_table_name, delete_logic);
+        } catch (Exception e) {
+          System.out.println(e.getMessage());
+        }
+        return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
+
       default:
     }
     return null;

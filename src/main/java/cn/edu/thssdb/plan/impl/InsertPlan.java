@@ -34,9 +34,4 @@ public class InsertPlan extends LogicalPlan {
   public String[] getColumnNames() {
     return columnNames;
   }
-
-  //    @Override
-  //    public String toString() {
-  //        return "UseDatabasePlan{" + "databaseName='" + tableName + '\'' + '}';
-  //    }
 }
