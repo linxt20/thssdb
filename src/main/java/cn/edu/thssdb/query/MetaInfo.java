@@ -15,28 +15,19 @@ class MetaInfo {
     this.columns = columns;
   }
 
-
-  /**
-   * 描述：找到对应列的位置
-   * 参数：列名
-   * 返回：位置i
-   */
+  /** 描述：找到对应列的位置 参数：列名 返回：位置i */
   int ColumnFind(String name) {
-    for(int i = 0; i < columns.size(); i ++) {
-      if(columns.get(i).getName().equals(name)){
+    for (int i = 0; i < columns.size(); i++) {
+      if (columns.get(i).getName().equals(name)) {
         return i;
       }
     }
     return -1;
   }
 
-  /**
-   * 描述：返回对应列全名
-   * 参数：列index
-   * 返回：全名，tablename.attrname
-   */
+  /** 描述：返回对应列全名 参数：列index 返回：全名，tablename.attrname */
   String GetFullName(int index) {
-    if(index < 0 || index >= columns.size()) {
+    if (index < 0 || index >= columns.size()) {
       return null;
     }
     String name = tableName + "." + columns.get(index).getName();
@@ -46,6 +37,7 @@ class MetaInfo {
   int GetColumnSize() {
     return columns.size();
   }
+
   String GetTableName() {
     return tableName;
   }

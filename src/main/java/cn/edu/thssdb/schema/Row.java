@@ -46,10 +46,8 @@ public class Row implements Serializable {
 
   public ArrayList<String> toStringList() {
     ArrayList<String> result = new ArrayList<>();
-    if (entries == null)
-      return result;
-    for (Entry e : entries)
-      result.add(e.toString());
+    if (entries == null) return result;
+    for (Entry e : entries) result.add(e.toString());
     return result;
   }
 }

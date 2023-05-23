@@ -3,11 +3,13 @@ package cn.edu.thssdb.service;
 import cn.edu.thssdb.plan.LogicalGenerator;
 import cn.edu.thssdb.plan.LogicalPlan;
 import cn.edu.thssdb.plan.impl.*;
+import cn.edu.thssdb.query.Logic;
+import cn.edu.thssdb.query.QueryResult;
+import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Row;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.StatusUtil;
@@ -125,15 +127,18 @@ public class IServiceHandler implements IService.Iface {
           if (tableNames.size() != 1) {
             return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
           }
-          queryTable = Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
+          queryTable =
+              Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
         }
         // 如果是复合表，需要读取join逻辑
         else {
-          queryTable = Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
+          queryTable =
+              Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
         }
         String res = "";
         try {
-          QueryResult result = Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
+          QueryResult result =
+              Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
           for (String column_name : result.mColumnName) {
             // response.addToColumnsList(column_name);
             res += column_name.toString() + ", ";
@@ -143,7 +148,7 @@ public class IServiceHandler implements IService.Iface {
             ArrayList<String> the_result = row.toStringList();
             String tmp = the_result.toString();
             tmp = tmp.substring(1, tmp.length() - 1);
-            res += tmp+ "\n";
+            res += tmp + "\n";
           }
           return new ExecuteStatementResp(StatusUtil.success(res), false);
         } catch (Exception e) {
@@ -171,6 +176,17 @@ public class IServiceHandler implements IService.Iface {
           }
         }
         return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
+      case DELETE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        DeletePlan deletePlan = (DeletePlan) plan;
+        String delete_table_name = deletePlan.getTableName();
+        Logic delete_logic = deletePlan.getCondition();
+        try {
+          Manager.getInstance().getCurrentDB().delete(delete_table_name, delete_logic);
+        } catch (Exception e) {
+          System.out.println(e.getMessage());
+        }
+        return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
 
       default:
     }
