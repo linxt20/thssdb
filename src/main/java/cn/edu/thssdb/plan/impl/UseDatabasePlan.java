@@ -7,7 +7,6 @@ public class UseDatabasePlan extends LogicalPlan {
 
   public UseDatabasePlan(String databaseName) {
     super(LogicalPlan.LogicalPlanType.USE_DB);
-    System.out.println("UseDatabasePlan: [DEBUG] " + databaseName);
     this.databaseName = databaseName;
   }
 

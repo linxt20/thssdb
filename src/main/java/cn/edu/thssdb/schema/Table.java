@@ -1,5 +1,6 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.KeyNotExistException;
 import cn.edu.thssdb.index.BPlusTree;
 import cn.edu.thssdb.storage.Cache;
 import cn.edu.thssdb.utils.Pair;
@@ -91,6 +92,77 @@ public class Table implements Iterable<Row> {
     return ret;
   }
 
+
+  // 将table中的所有数据清空
+  public void dropall()
+  {
+    try {
+      lock.writeLock().lock();
+      cache.dropall();
+      cache = null;
+
+      File dir = new File(storage_dir);
+      File[] fileList = dir.listFiles();
+      if (fileList == null)
+        return;
+      for (File f : fileList) {
+        if (f != null && f.isFile()) {
+          try {
+            String[] parts = f.getName().split("\\.")[0].split("_");
+            String databaseName = parts[0];
+            String tableName = parts[1];
+            if (!(this.databaseName.equals(databaseName) && this.tableName.equals(tableName)))
+              continue;
+          }
+          catch (Exception e) {
+            continue;
+          }
+          f.delete();
+        }
+      }
+
+      columns.clear();
+      columns = null;
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * 描述：获得主键名称
+   * 参数：无
+   * 返回：主键名称，如果没有就null
+   */
+  public String GetPrimaryName() {
+    if(this.primaryIndex < 0 || this.primaryIndex >= this.columns.size()) {
+      return null;
+    }
+    return this.columns.get(this.primaryIndex).getName();
+  }
+
+  public Row get(Entry entry)
+  {
+    if (entry == null)
+      throw new KeyNotExistException(null);
+
+    Row row;
+    try {
+      lock.readLock().lock();
+      row = cache.getRow(entry, primaryIndex);
+    }
+    catch (KeyNotExistException e) {
+      throw e;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+    return row;
+  }
+
+  public int GetPrimaryIndex() {
+    return this.primaryIndex;
+  }
   public void insert() {
     // TODO
   }

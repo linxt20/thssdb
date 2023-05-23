@@ -8,7 +8,6 @@ public class ShowTablePlan extends LogicalPlan {
 
   public ShowTablePlan(String tableName) {
     super(LogicalPlanType.SHOW_TABLE);
-    System.out.println("CreateDatabasePlan: [DEBUG] " + tableName);
     this.tableName = tableName;
   }
 
