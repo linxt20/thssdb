@@ -25,8 +25,10 @@ public class Manager {
 
   public Manager() {
     // TODO
+    System.out.println("Manager init");
     this.currentDB = null;
     this.databases = new HashMap<>();
+    recover();
   }
   // getdatabase函数是获取指定名字的database
   public Database getDatabase(String dbName) {
@@ -94,7 +96,6 @@ public class Manager {
   }
   // deletedatabase函数是删除指定名字的database
   public void deleteDatabase(String dbName) {
-    // TODO
     try {
       lock.writeLock().lock();
       if (!databases.containsKey(dbName))

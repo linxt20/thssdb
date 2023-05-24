@@ -61,15 +61,16 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     // TODO 需要修改
     String name = ctx.tableName().getText();
     int n = ctx.columnDef().size();
-    System.out.println("1 visitCreateTableStmt column size: " + n + " name: " + name);
+    //    System.out.println("1 visitCreateTableStmt column size: " + n + " name: " + name);
     Column[] columns = new Column[n];
     int i = 0;
 
     // 读取各个列的定义
     for (SQLParser.ColumnDefContext columnContext : ctx.columnDef()) {
       columns[i++] = readColumn(columnContext);
-      System.out.println(
-          "  visitCreateTableStmt: " + columns[i - 1].getName() + " " + columns[i - 1].getType());
+      //      System.out.println(
+      //          "  visitCreateTableStmt: " + columns[i - 1].getName() + " " + columns[i -
+      // 1].getType());
     }
 
     // 读取表定义末端的信息--primary key
@@ -85,7 +86,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       for (String compositeName : compositeNames) {
         boolean found = false;
         for (Column c : columns) {
-          if (c.getName().toLowerCase().equals(compositeName.toLowerCase())) {
+          if (c.getName().toLowerCase().equals(compositeName)) {
             c.setPrimary(1);
             found = true;
           }
@@ -633,6 +634,5 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     //      }
     //    }
   }
-
   // TODO: parser to more logical plan
 }

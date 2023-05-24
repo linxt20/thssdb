@@ -29,6 +29,12 @@ public class ThssDB {
   public static void main(String[] args) {
     ThssDB server = ThssDB.getInstance();
     server.start();
+
+    Runtime.getRuntime().addShutdownHook(new Thread(server::destroy));
+  }
+
+  private void destroy() {
+    Manager.getInstance().quit();
   }
 
   private void start() {
