@@ -219,6 +219,8 @@ public class Database {
         }
         table.insert(column_names, values, false);
       }
+    } catch (Exception e){
+      e.printStackTrace();
     } finally {
       lock.writeLock().unlock();
     }

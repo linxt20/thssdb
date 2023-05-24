@@ -41,7 +41,10 @@ public class Table implements Iterable<Row> {
         this.primaryIndex = i;
       }
     }
-    // TODO primaryIndex如果没有被更新需要抛出异常
+    if (primaryIndex < 0 || primaryIndex >= this.columns.size()) {
+      // TODO primaryIndex如果没有被更新需要抛出异常
+      throw new KeyNotExistException();
+    }
     this.cache = new Cache(databaseName, tableName);
     // TODO 一些后面要加的变量
     recover();
@@ -171,6 +174,7 @@ public class Table implements Iterable<Row> {
   // ParseValue函数的重载，将string类型的value转换成column的类型
   private Comparable ParseValue(Column the_column, String value) {
     if (value.equals("null")) {
+      System.out.println("caught a null value");
       if (the_column.NotNull()) {
         throw new NullValueException(the_column.getName());
       } else {
@@ -261,6 +265,7 @@ public class Table implements Iterable<Row> {
 
   // 这个insert插入的数据是自带顺序的，所以不需要重新排序，转化为Entry然后插入即可
   public void insert(String[] value_list, boolean in_tran) {
+    System.out.println("insert value list");
     if (value_list == null) return;
     int len = this.columns.size(); // 当前表的列数
 
@@ -286,27 +291,47 @@ public class Table implements Iterable<Row> {
 
   //   insert函数将传入的列数据按照当前table的列顺序插入到cache中
   public void insert(String[] column_list, String[] value_list, boolean in_tran) {
-    if (column_list == null || value_list == null) return;
+    System.out.println("insert column list");
+    if (column_list == null || value_list == null)  return;
     int len = this.columns.size(); // 当前表的列数
-    if (column_list.length != len || value_list.length != len)
-      throw new RuntimeException("column_list.length != len || value_list.length != len");
-
+    // 如果输入的value和columns个数对不上或者输入的column比表中的column还多，报错并返回 TODO 报错
+    if(column_list.length != value_list.length || column_list.length > len) return;
     // 将entries按照当前table列的顺序排序
     ArrayList<Entry> entry_list_sorted = new ArrayList<>();
     HashMap<String, Integer> column_index = new HashMap<>();
-    for (int i = 0; i < len; i++) {
-      if (column_index.get(column_list[i]) != null)
+    for (int i = 0; i < column_list.length; i++) {
+      if (column_index.get(column_list[i]) != null) {
         throw new RuntimeException("column_list中存在重复的列名");
+      }
       column_index.put(column_list[i], i);
     }
+    // resize value list
+    String new_value_list[] = new String[len];
+    for (int i = 0; i < column_list.length; i++) {
+      new_value_list[i] = value_list[i];
+    }
+    if (column_list.length < len) {
+      System.out.println("Input columns size less than table's columns size: " + column_list.length);
+      // 这里输入的columns少于table的columns个数，需要判断是否缺少not null的类
+        int i = 0, column_list_index = column_list.length;
+        for (Column column : this.columns) {
+            if (column_index.get(column.getName()) == null) {
+              if(column.NotNull()){
+                System.out.println("缺少not null的列: " + column.getName());
+                throw new RuntimeException("缺少not null的列: " + column.getName());
+              }
+              System.out.println("column_list_index: " + column_list_index + " column: " + column.getName());
+              new_value_list[column_list_index] = "null";
+              column_index.put(column.getName(), column_list_index);
+              column_list_index++;
+            }
+            i++;
+        }
+    }
     for (Column column : this.columns) {
+      System.out.println("index: " + column_index.get(column.getName()));
       Integer index = column_index.get(column.getName());
-      Comparable the_entry_value = null;
-      if (index != null) {
-        the_entry_value = ParseValue(column, value_list[index]);
-      } else {
-        the_entry_value = ParseValue(column, "null");
-      }
+      Comparable the_entry_value = ParseValue(column, new_value_list[index]);
       entry_list_sorted.add(new Entry(the_entry_value));
     }
     // 将这个entry_list_sorted插入到cache中
