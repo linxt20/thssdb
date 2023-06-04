@@ -1,6 +1,7 @@
 package cn.edu.thssdb.client;
 
 import cn.edu.thssdb.rpc.thrift.*;
+import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.utils.Global;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -59,6 +60,7 @@ public class Client {
       TProtocol protocol = new TBinaryProtocol(transport);
       client = new IService.Client(protocol);
       boolean open = true;
+      Manager.getInstance();
       // 进入消息循环处理，这里处理connect,disconnect,show time和quit四种特殊语句和sql语句执行
       while (true) {
         print(Global.CLI_PREFIX);
@@ -174,7 +176,9 @@ public class Client {
       DisconnectResp resp = client.disconnect(req);
       if (resp.status.code == Global.SUCCESS_CODE) {
         sessionID = -1;
+        Manager.getInstance().quit();
         println(resp.status.getMsg());
+
       } else if (resp.status.code == Global.FAILURE_CODE) {
         println(resp.status.getMsg());
       }

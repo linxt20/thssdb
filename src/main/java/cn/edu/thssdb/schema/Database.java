@@ -147,6 +147,7 @@ public class Database {
       filesToDelete.forEach(File::delete); // 采用foreach的并行删除，减少系统的文件操作开销也提高了效率
       tables.clear();
       tables = null;
+      tables = new HashMap<>();
     } finally {
       lock.writeLock().unlock();
     }
