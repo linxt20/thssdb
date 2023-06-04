@@ -44,13 +44,13 @@ public class Logic {
       }
       if (mType == LogicType.AND) {
         // 一共9个条件
-        // false 和三种情况一起都是false，覆盖了5条件
-        if (left_result == ResultType.FALSE || right_result == ResultType.FALSE) {
-          return ResultType.FALSE;
-        }
-        // true，unknown和unknown一起都是unknown，覆盖了3条件
-        else if (left_result == ResultType.UNKNOWN || right_result == ResultType.UNKNOWN) {
+        // unknown 和三种情况一起都是unknown，覆盖了5条件
+        if (left_result == ResultType.UNKNOWN || right_result == ResultType.UNKNOWN) {
           return ResultType.UNKNOWN;
+        }
+        // true，false和false一起都是false，覆盖了3条件
+        else if (left_result == ResultType.FALSE || right_result == ResultType.FALSE) {
+          return ResultType.FALSE;
         }
         // true和true一起是true，1条件
         else if (left_result == ResultType.TRUE && right_result == ResultType.TRUE) {
@@ -58,13 +58,13 @@ public class Logic {
         }
       } else if (mType == LogicType.OR) {
         // 一共9个条件
-        // true 和三种情况一起都是true，覆盖了5条件
-        if (left_result == ResultType.TRUE || right_result == ResultType.TRUE) {
-          return ResultType.TRUE;
-        }
-        // false，unknown和unknown一起都是unknown，覆盖了3条件
-        else if (left_result == ResultType.UNKNOWN || right_result == ResultType.UNKNOWN) {
+        // unknown 和三种情况一起都是unknown，覆盖了5条件
+        if (left_result == ResultType.UNKNOWN || right_result == ResultType.UNKNOWN) {
           return ResultType.UNKNOWN;
+        }
+        // false，true和true一起都是true，覆盖了3条件
+        else if (left_result == ResultType.TRUE || right_result == ResultType.TRUE) {
+          return ResultType.TRUE;
         }
         // false和false一起是false，1条件
         else if (left_result == ResultType.FALSE && right_result == ResultType.FALSE) {

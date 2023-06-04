@@ -175,6 +175,8 @@ public class ServiceRuntime {
           System.out.println(e.getMessage());
         }
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
+//      case :
+
 
       default:
     }

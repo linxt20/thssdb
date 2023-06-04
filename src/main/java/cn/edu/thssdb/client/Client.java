@@ -117,7 +117,6 @@ public class Client {
       ExecuteStatementResp resp = client.executeStatement(req);
       if (resp.status.code == Global.SUCCESS_CODE) {
         if (resp.hasResult) {
-          // TODO: 这里没有有处理行或者列为null的情况
           // 这里先输出列标题，然后一行一行输出
           StringBuilder column_str = new StringBuilder();
           int column_size = resp.columnsList.size();
@@ -176,7 +175,6 @@ public class Client {
       DisconnectResp resp = client.disconnect(req);
       if (resp.status.code == Global.SUCCESS_CODE) {
         sessionID = -1;
-        Manager.getInstance().quit();
         println(resp.status.getMsg());
 
       } else if (resp.status.code == Global.FAILURE_CODE) {
@@ -229,7 +227,11 @@ public class Client {
 
   private static void showHelp() {
     // TODO:test this with something like ./client -help
-    println("DO IT YOURSELF");
+    println("If you want to get the time: show time;");
+    println("If you want to connect: connect root root;");
+    println("If you want to disconnect: disconnect;");
+    println("If you want to quit: quit;");
+    println("If you want to execute sql statements, just type the one you want in a line.");
   }
 
   private static void echoStarting() {

@@ -74,5 +74,4 @@ public class Page {
   public Boolean getIn_tran() {
     return in_tran;
   }
-  // TODO: 这里需要注意，在多线程情况下，不能同时调用Entry_list_add和Entry_list_remove()，可能会导致size不正确
 }

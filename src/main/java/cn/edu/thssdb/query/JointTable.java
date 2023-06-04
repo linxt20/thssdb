@@ -10,12 +10,12 @@ import java.util.LinkedList;
 /** 描述：多个table使用的联合查找表 参数：table */
 public class JointTable extends QueryTable implements Iterator<Row> {
 
-  private ArrayList<Iterator<Row>> mIterators;
+  private ArrayList<Iterator<Row>> mIterators; // 這裡是每個table的iterator
   private ArrayList<Table> mTables;
-  private Logic mLogicJoin;
+  private Logic mLogicJoin; // 這裡是join的邏輯
 
   /** 长度=每个table，分别代表每个table要出来join的列 */
-  private LinkedList<Row> mRowsToBeJoined;
+  private LinkedList<Row> mRowsToBeJoined; // 用于存放每个table要join的row
 
   public JointTable(ArrayList<Table> tables, Logic joinLogic) {
     super();
@@ -84,7 +84,7 @@ public class JointTable extends QueryTable implements Iterator<Row> {
       }
       // 再补回去
       for (int i = index; i < mIterators.size(); i++) {
-        if (!mIterators.get(i).hasNext()) return null;
+        if (!mIterators.get(i).hasNext()) throw new RuntimeException("Iterator should have next");
         mRowsToBeJoined.push(mIterators.get(i).next());
       }
       return new JointRow(mRowsToBeJoined, mTables);

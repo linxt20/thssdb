@@ -26,10 +26,11 @@ public class Table implements Iterable<Row> {
   private int primaryIndex; // 主键的索引 就是主键在columns中的下标
   public Cache cache;
 
-  // TODO 暂时不考虑锁，后面再补充
+  int tplock = 0;
+  public ArrayList<Long> s_lock_list;
+  public ArrayList<Long> x_lock_list;
 
   public Table(String databaseName, String tableName, Column[] columns) {
-    System.out.println("==========Table constructor=============");
     this.lock = new ReentrantReadWriteLock();
     this.databaseName = databaseName;
     this.tableName = tableName;
@@ -41,10 +42,74 @@ public class Table implements Iterable<Row> {
         this.primaryIndex = i;
       }
     }
-    // TODO primaryIndex如果没有被更新需要抛出异常
+    if (primaryIndex < 0 || primaryIndex >= this.columns.size()) {
+      throw new RuntimeException("PrimaryNotExistException" + tableName);
+    }
     this.cache = new Cache(databaseName, tableName);
-    // TODO 一些后面要加的变量
+    this.s_lock_list = new ArrayList<>();
+    this.x_lock_list = new ArrayList<>();
+    this.tplock = 0;
     recover();
+  }
+  // get_s_lock函数根据session获取s锁
+  public int get_s_lock(long session) {
+    int value = 0; // 返回-1代表加锁失败  返回0代表成功但未加锁  返回1代表成功加锁
+    if (tplock == 2) {
+      if (x_lock_list.contains(session)) { // 自身已经有更高级的锁了 用x锁去读，未加锁
+        value = 0;
+      } else {
+        value = -1; // 别的session占用x锁，未加锁
+      }
+    } else if (tplock == 1) {
+      if (s_lock_list.contains(session)) { // 自身已经有s锁了 用s锁去读，未加锁
+        value = 0;
+      } else {
+        s_lock_list.add(session); // 其他session加了s锁 把自己加上
+        tplock = 1;
+        value = 1;
+      }
+    } else if (tplock == 0) {
+      s_lock_list.add(session); // 未加锁 把自己加上
+      tplock = 1;
+      value = 1;
+    }
+    return value;
+  }
+
+  public int get_x_lock(long session) {
+    int value = 0; // 返回-1代表加锁失败  返回0代表成功但未加锁  返回1代表成功加锁
+    if (tplock == 2) {
+      if (x_lock_list.contains(session)) { // 自身已经取得x锁
+        value = 0;
+      } else {
+        value = -1; // 获取x锁失败
+      }
+    } else if (tplock == 1) {
+      value = -1; // 正在被其他s锁占用
+    } else if (tplock == 0) {
+      x_lock_list.add(session);
+      tplock = 2;
+      value = 1;
+    }
+    return value;
+  }
+
+  public void free_s_lock(long session) {
+    if (s_lock_list.contains(session)) {
+      s_lock_list.remove(session);
+      if (s_lock_list.size() == 0) {
+        tplock = 0;
+      } else {
+        tplock = 1;
+      }
+    }
+  }
+
+  public void free_x_lock(long session) {
+    if (x_lock_list.contains(session)) {
+      tplock = 0;
+      x_lock_list.remove(session);
+    }
   }
 
   // getRow函数根据主键的值获取行数据
@@ -129,40 +194,47 @@ public class Table implements Iterable<Row> {
     String string_value = value.mValue + "";
     if (value.mType == ComparerType.COLUMN) {
       if (the_column.getType().equals(ColumnType.STRING)) {
-        // throw new TypeNotMatchException(ComparerType.COLUMN, ComparerType.STRING);
+        throw new RuntimeException(
+            "TypeNotMatchException:" + ComparerType.COLUMN + " " + ComparerType.STRING);
       } else {
-        // throw new TypeNotMatchException(ComparerType.COLUMN, ComparerType.NUMBER);
+        throw new RuntimeException(
+            "TypeNotMatchException" + ComparerType.COLUMN + " " + ComparerType.NUMBER);
       }
     }
 
     switch (the_column.getType()) {
       case DOUBLE:
         if (value.mType == ComparerType.STRING) {
-          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+          throw new RuntimeException(
+              "TypeNotMatchException:" + ComparerType.STRING + " " + ComparerType.NUMBER);
         }
         return Double.parseDouble(string_value);
       case INT:
         if (value.mType == ComparerType.STRING) {
-          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+          throw new RuntimeException(
+              "TypeNotMatchException:" + ComparerType.STRING + " " + ComparerType.NUMBER);
         }
         double double_value = Double.parseDouble(string_value);
         int int_value = (int) double_value;
         return Integer.parseInt(int_value + "");
       case FLOAT:
         if (value.mType == ComparerType.STRING) {
-          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+          throw new RuntimeException(
+              "TypeNotMatchException:" + ComparerType.STRING + " " + ComparerType.NUMBER);
         }
         return Float.parseFloat(string_value);
       case LONG:
         if (value.mType == ComparerType.STRING) {
-          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+          throw new RuntimeException(
+              "TypeNotMatchException:" + ComparerType.STRING + " " + ComparerType.NUMBER);
         }
         double double_value_2 = Double.parseDouble(string_value);
         long long_value = (long) double_value_2;
         return Long.parseLong(long_value + "");
       case STRING:
         if (value.mType == ComparerType.NUMBER) {
-          // throw new TypeNotMatchException(ComparerType.STRING, ComparerType.NUMBER);
+          throw new RuntimeException(
+              "TypeNotMatchException:" + ComparerType.STRING + " " + ComparerType.NUMBER);
         }
         return string_value;
     }
@@ -192,29 +264,42 @@ public class Table implements Iterable<Row> {
     return null;
   }
 
-  /** 描述：用于sql parser的更新函数 参数：待更新列名，待更新值（string类型），逻辑 返回：字符串，表明更新了多少数据 */
+  private void JudgeValid(Column the_column, Comparable new_value) { // 这里使用Comparable是因为可以接受多种格式的数据
+    boolean not_null = the_column.NotNull();
+    ColumnType the_type = the_column.getType();
+    int max_length = the_column.getMaxLength();
+    if (not_null == true && new_value == null) {
+      throw new NullValueException(the_column.getName());
+    }
+    if (the_type == ColumnType.STRING && new_value != null) {
+      if (max_length >= 0 && (new_value + "").length() > max_length) {
+        throw new RuntimeException("ValueLengthExceedException:" + the_column.getName());
+      }
+    }
+  }
+
   public String update(String column_name, Comparer value, Logic the_logic) {
     int count = 0;
-    for (Row row : this) {
+    boolean whether_find = false;
+    Column the_column = null;
+    for (Column column : this.columns) {
+      if (column.getName().equals(column_name)) {
+        the_column = column;
+        whether_find = true;
+        break;
+      }
+    }
+    if (the_column == null || whether_find == false) {
+      throw new RuntimeException("AttributeNotFoundException:" + column_name);
+    }
+    for (Row row : this) { // this是table的迭代器,row是table的行
       JointRow the_row = new JointRow(row, this);
       if (the_logic == null || the_logic.GetResult(the_row) == ResultType.TRUE) {
         Entry primary_entry = row.getEntries().get(primaryIndex);
-        // 找到对应column
-        boolean whether_find = false;
-        Column the_column = null;
-        for (Column column : this.columns) {
-          if (column.getName().equals(column_name)) {
-            the_column = column;
-            whether_find = true;
-            break;
-          }
-        }
-        if (the_column == null || whether_find == false) {
-          // throw new AttributeNotFoundException(column_name);
-        }
-
         // 值处理，合法性判断
         Comparable the_entry_value = ParseValue(the_column, value);
+
+        JudgeValid(the_column, the_entry_value);
 
         // 插入
         Entry the_entry = new Entry(the_entry_value);
@@ -230,7 +315,6 @@ public class Table implements Iterable<Row> {
   }
 
   // update函数更新主键值所对应的行
-  // TODO 后续考虑加入选择逻辑
   public void update(
       Entry primary_entry, ArrayList<Column> columns, ArrayList<Entry> entries, boolean in_tran) {
     if (primary_entry == null || columns == null || entries == null)
@@ -271,6 +355,7 @@ public class Table implements Iterable<Row> {
     for (int i = 0; i < this.columns.size(); i++) {
       Column column = this.columns.get(i);
       Comparable the_entry_value = ParseValue(column, value_list[i]);
+      JudgeValid(column, the_entry_value);
       orderedEntries.add(new Entry(the_entry_value));
     }
     // write to cache
@@ -307,6 +392,7 @@ public class Table implements Iterable<Row> {
       } else {
         the_entry_value = ParseValue(column, "null");
       }
+      JudgeValid(column, the_entry_value);
       entry_list_sorted.add(new Entry(the_entry_value));
     }
     // 将这个entry_list_sorted插入到cache中
@@ -321,7 +407,6 @@ public class Table implements Iterable<Row> {
   }
 
   // delete函数删除主键值所对应的行
-  // TODO 后续考虑加入选择逻辑
   public void delete(Entry primary_entry, boolean in_tran) {
     if (primary_entry == null) return;
     try {
@@ -331,7 +416,7 @@ public class Table implements Iterable<Row> {
       lock.writeLock().unlock();
     }
   }
-  // TODO
+
   public String delete(Logic the_logic) {
     int count = 0;
     for (Row row : this) {
@@ -393,7 +478,6 @@ public class Table implements Iterable<Row> {
     cache.quit_tran();
   }
 
-  // TODO 这个TableIterator类用于实现Table的迭代器，但是还不太理解有什么作用
   private class TableIterator implements Iterator<Row> {
     private Iterator<Pair<Entry, Row>> iterator;
 

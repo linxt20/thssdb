@@ -18,7 +18,6 @@ public class JointRow extends Row {
     super();
     mTableInfoList = new ArrayList<>();
     this.entries = new ArrayList<>();
-    // for (int i = rows.size() - 1; i >= 0; i--) {
     for (int i = rows.size() - 1; i >= 0; i--) {
       entries.addAll(rows.get(i).getEntries());
     }
@@ -45,8 +44,9 @@ public class JointRow extends Row {
         return ComparerType.NUMBER;
       case STRING:
         return ComparerType.STRING;
+      default:
+        return ComparerType.NULL;
     }
-    return ComparerType.NULL;
   }
 
   /**
@@ -56,7 +56,7 @@ public class JointRow extends Row {
   private String[] SplitColumnName(String full_name) {
     String[] splited_name = full_name.split("\\.");
     if (splited_name.length != 2) {
-      // throw new AttributeInvalidException(full_name);
+      throw new RuntimeException("AttributeInvalidException" + full_name);
     }
     return splited_name;
   }
@@ -84,9 +84,9 @@ public class JointRow extends Row {
         total_index += the_table.columns.size();
       }
       if (equal_sum < 1) {
-        // throw new AttributeNotFoundException(column_name);
+        throw new RuntimeException("AttributeNotFoundException" + column_name);
       } else if (equal_sum > 1) {
-        // throw new AttributeCollisionException(column_name);
+        throw new RuntimeException("AttributeCollisionException" + column_name);
       }
     }
     // tablename.columnname
@@ -111,7 +111,7 @@ public class JointRow extends Row {
         total_index += table.columns.size();
       }
       if (!whether_found) {
-        // throw new AttributeNotFoundException(column_name);
+        throw new RuntimeException("AttributeNotFoundException" + column_name);
       }
     }
     comparer_type = GetComparerType(column_type);
