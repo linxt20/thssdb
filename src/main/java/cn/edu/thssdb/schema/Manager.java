@@ -3,10 +3,7 @@ package cn.edu.thssdb.schema;
 import cn.edu.thssdb.runtime.ServiceRuntime;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -131,9 +128,24 @@ public class Manager {
     if (file.exists() && file.isFile()) {
       System.out.println("log file size: " + file.length() + " Byte");
       System.out.println("Read WAL log to recover database.");
-//      ServiceRuntime.executeStatement("use " + databaseName);
+      String temp_log_name = storage_dir + getCurrentDB().getName() + ".temp.log";
+      File temp_file = new File(temp_log_name);
+      try {
+        Files.copy(file.toPath(), temp_file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
 
-      try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
+      // 清空原日志文件
+      try (PrintWriter writer = new PrintWriter(file)) {
+        writer.print("");
+      } catch (FileNotFoundException e) {
+        e.printStackTrace();
+      }
+
+      ServiceRuntime.executeStatement("use " + databaseName, 0);
+
+      try (BufferedReader bufferedReader = new BufferedReader(new FileReader(temp_file))) {
         String line;
         ArrayList<String> lines = new ArrayList<>();
         StringBuilder stringBuilder = new StringBuilder();
@@ -150,26 +162,21 @@ public class Manager {
           stringBuilder.append(line).append("\n");
           index++;
         }
-        int last_cmd = 0;
-        if (transaction_list.size() == commit_list.size()) {
-          last_cmd = index - 1;
-        } else {
-          last_cmd = transaction_list.get(transaction_list.size() - 1) - 1;
-        }
-        for (int i = 0; i <= last_cmd; i++) {
-//          ServiceRuntime.executeStatement(lines.get(i));
-        }
-        System.out.println("read " + (last_cmd + 1) + " lines");
+        int start_cmd = 0;
 
-        // 清空log并重写实际执行部分
         if (transaction_list.size() != commit_list.size()) {
-          // 删除旧的日志文件
-          Path path = Paths.get(log_name);
-          Files.deleteIfExists(path);
-
-          // 写入实际执行部分内容
-          Files.write(path, stringBuilder.toString().getBytes(), StandardOpenOption.CREATE);
+          start_cmd = transaction_list.get(transaction_list.size() - 1);
+//          // redo
+//          for (int i = start_cmd; i < index; i++) {
+//            ServiceRuntime.executeStatement(lines.get(i),0);
+//          }
+//          // undo
+//          for (int i = index-1; i >= start_cmd; i--) {
+//            ServiceRuntime.executeStatement(lines.get(i),0);
+//          }
         }
+
+        System.out.println("read " + (index - start_cmd + 1) + " lines");
       } catch (IOException e) {
         e.printStackTrace();
       }

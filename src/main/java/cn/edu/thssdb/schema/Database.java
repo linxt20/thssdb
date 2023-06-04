@@ -310,18 +310,4 @@ public class Database {
       lock.writeLock().unlock();
     }
   }
-  // 这里是取消指定table_list的事务，参数有需要可以改为ArrayList<String>
-  public void quit_tran_tables(String[] table_name_list) {
-    try {
-      lock.writeLock().lock();
-      for (String table_name : table_name_list) {
-        if (!tables.containsKey(table_name)) {
-          throw new RuntimeException("Table " + table_name + " not exist");
-        }
-        tables.get(table_name).quit_tran();
-      }
-    } finally {
-      lock.writeLock().unlock();
-    }
-  }
 }

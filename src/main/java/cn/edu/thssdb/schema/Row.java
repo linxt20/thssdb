@@ -25,10 +25,6 @@ public class Row implements Serializable {
     return entries;
   }
 
-  public void appendEntries(ArrayList<Entry> entries) {
-    this.entries.addAll(entries);
-  }
-
   public int getPosition() {
     return position;
   }

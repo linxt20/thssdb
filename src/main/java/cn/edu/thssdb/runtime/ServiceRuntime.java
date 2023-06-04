@@ -20,7 +20,19 @@ import java.util.List;
 public class ServiceRuntime {
 
   public static ExecuteStatementResp executeStatement(String statement, long sessionId) {
-    LogicalPlan plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
+    statement = statement.trim();
+    String cmd = statement.split("\\s+")[0];
+    LogicalPlan plan;
+    if ((cmd.toLowerCase().equals("insert") || cmd.toLowerCase().equals("update") ||
+            cmd.toLowerCase().equals("delete") || cmd.toLowerCase().equals("select")) && !Manager.getInstance().transaction_sessions.contains(sessionId)) {
+      LogicalGenerator.generate("autobegin transaction", sessionId);
+      plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
+      LogicalGenerator.generate("autocommit", sessionId);
+
+    } else {
+      plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
+    }
+
     String name;
     switch (plan.getType()) {
       case CREATE_DB:
@@ -60,7 +72,7 @@ public class ServiceRuntime {
           return new ExecuteStatementResp(StatusUtil.fail("Database does not exist."), false);
         }
       case CREATE_TABLE:
-        // TODO 检查table是否已经存在～
+        // 在create当中就完成了table是否已经存在的判断
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         CreateTablePlan createTablePlan = (CreateTablePlan) plan;
         name = createTablePlan.getTableName();
@@ -105,7 +117,6 @@ public class ServiceRuntime {
               Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
         }
 
-        // TODO 后面要进行字符串处理哈哈哈哈这个太随便了
         String res = "";
         try {
           QueryResult result =
@@ -123,13 +134,11 @@ public class ServiceRuntime {
           return new ExecuteStatementResp(StatusUtil.success(res), false);
         } catch (Exception e) {
           QueryResult error_result = new QueryResult(e.toString());
-          // return error_result;
           return new ExecuteStatementResp(StatusUtil.fail("Exception"), false);
         }
       case INSERT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         InsertPlan insertPlan = (InsertPlan) plan;
-        // TODO read commit锁 目前先不加
         String table_name = insertPlan.getTableName();
         String[] column_names = insertPlan.getColumnNames();
         List<SQLParser.ValueEntryContext> value_entrys = insertPlan.getValueEntryContextList();
@@ -176,8 +185,18 @@ public class ServiceRuntime {
           System.out.println(e.getMessage());
         }
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
-//      case :
-
+      case BEGIN_TRANSACTION:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(StatusUtil.success("Begin transaction successfully."), false);
+      case COMMIT:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(StatusUtil.success("Commit successfully."), false);
+      case AUTO_BEGIN_TRANSACTION:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(StatusUtil.success("Auto begin transaction successfully."), false);
+      case AUTO_COMMIT:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(StatusUtil.success("Auto commit successfully."), false);
 
       default:
     }

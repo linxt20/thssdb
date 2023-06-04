@@ -72,18 +72,6 @@ public class QueryResult {
     }
   }
 
-  /** 描述：将选中的列（meta信息）转化为字符串输出 参数：无 返回：输出字符串 */
-  public String MetaToString() {
-    String result = "";
-    for (int i = 0; i < mColumnName.size(); i++) {
-      result += mColumnName.get(i);
-      if (i != mColumnName.size() - 1) {
-        result += ", ";
-      }
-    }
-    return result;
-  }
-
   /**
    * 描述：将TableName.ColumnName形式的变量拆分出TableName,ColumnName 参数：全名
    * 返回：一个长度为2的数组，0号是tablename，1号是columnname

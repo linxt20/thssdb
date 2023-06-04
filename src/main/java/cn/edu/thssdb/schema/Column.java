@@ -66,23 +66,4 @@ public class Column implements Comparable<Column> {
     }
     return ret;
   }
-
-  public static ColumnType str2DataType(String strType) {
-    switch (strType.toLowerCase()) {
-      case "string":
-        return ColumnType.STRING;
-      case "int":
-        return ColumnType.INT;
-      case "long":
-        return ColumnType.LONG;
-      case "float":
-        return ColumnType.FLOAT;
-      case "double":
-        return ColumnType.DOUBLE;
-    }
-    if (Pattern.matches("string\\([0-9]+\\)", strType.toLowerCase())) {
-      return ColumnType.STRING;
-    }
-    return ColumnType.INT;
-  }
 }
