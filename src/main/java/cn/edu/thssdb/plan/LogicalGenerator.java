@@ -20,6 +20,7 @@ package cn.edu.thssdb.plan;
 
 import cn.edu.thssdb.parser.SQLParseError;
 import cn.edu.thssdb.parser.ThssDBSQLVisitor;
+import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.sql.SQLLexer;
 import cn.edu.thssdb.sql.SQLParser;
 import org.antlr.v4.runtime.CharStream;
@@ -29,10 +30,21 @@ import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import java.util.Arrays;
+
 public class LogicalGenerator {
 
-  public static LogicalPlan generate(String sql) throws ParseCancellationException {
-    ThssDBSQLVisitor dbsqlVisitor = new ThssDBSQLVisitor();
+  private static String[] wal_flag = {"insert","delete","update","begin","commit"};
+
+  public static LogicalPlan generate(String sql,long sessionId) throws ParseCancellationException {
+    String cmd = sql.split("\\s+")[0];
+
+    if(Arrays.asList(wal_flag).contains(cmd.toLowerCase()) && sessionId==0)
+    {
+      Manager.getInstance().write_log(sql);
+    }
+
+    ThssDBSQLVisitor dbsqlVisitor = new ThssDBSQLVisitor(sessionId);
 
     CharStream charStream1 = CharStreams.fromString(sql);
 

@@ -131,7 +131,7 @@ public class Manager {
     if (file.exists() && file.isFile()) {
       System.out.println("log file size: " + file.length() + " Byte");
       System.out.println("Read WAL log to recover database.");
-      ServiceRuntime.executeStatement("use " + databaseName);
+//      ServiceRuntime.executeStatement("use " + databaseName);
 
       try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
         String line;
@@ -157,7 +157,7 @@ public class Manager {
           last_cmd = transaction_list.get(transaction_list.size() - 1) - 1;
         }
         for (int i = 0; i <= last_cmd; i++) {
-          ServiceRuntime.executeStatement(lines.get(i));
+//          ServiceRuntime.executeStatement(lines.get(i));
         }
         System.out.println("read " + (last_cmd + 1) + " lines");
 

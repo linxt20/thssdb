@@ -60,7 +60,6 @@ public class Client {
       TProtocol protocol = new TBinaryProtocol(transport);
       client = new IService.Client(protocol);
       boolean open = true;
-      Manager.getInstance();
       // 进入消息循环处理，这里处理connect,disconnect,show time和quit四种特殊语句和sql语句执行
       while (true) {
         print(Global.CLI_PREFIX);

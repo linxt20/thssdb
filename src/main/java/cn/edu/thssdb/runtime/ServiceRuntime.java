@@ -18,8 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ServiceRuntime {
-  public static ExecuteStatementResp executeStatement(String statement) {
-    LogicalPlan plan = LogicalGenerator.generate(statement); // 这里会调用parser解析语句
+
+  public static ExecuteStatementResp executeStatement(String statement, long sessionId) {
+    LogicalPlan plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
     String name;
     switch (plan.getType()) {
       case CREATE_DB:
