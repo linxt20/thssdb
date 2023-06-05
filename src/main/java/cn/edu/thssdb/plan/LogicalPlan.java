@@ -24,5 +24,9 @@ public abstract class LogicalPlan {
     INSERT,
     UPDATE,
     DELETE,
+    BEGIN_TRANSACTION,
+    COMMIT,
+    AUTO_BEGIN_TRANSACTION,
+    AUTO_COMMIT
   }
 }

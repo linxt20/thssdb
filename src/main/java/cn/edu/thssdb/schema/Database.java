@@ -29,7 +29,7 @@ public class Database {
 
   public Table get(String name) {
     try {
-      lock.readLock().lock(); // TODO 为什么是read？
+      lock.readLock().lock();
       if (!tables.containsKey(name)) {
         throw new KeyNotExistException();
       }
@@ -89,9 +89,7 @@ public class Database {
     }
     try {
       lock.writeLock().lock();
-      if (tables.containsKey(name))
-        // TODO: throw exception DuplicateTableException, which is not defined yet
-        throw new RuntimeException("Database create table error");
+      if (tables.containsKey(name)) throw new RuntimeException("Database create table error");
 
       Table new_table = new Table(this.name, name, columns);
       tables.put(name, new_table);
@@ -107,7 +105,6 @@ public class Database {
       lock.writeLock().lock();
       if (!tables.containsKey(name)) // 判断table是否存在
       throw new RuntimeException("database don't have the table");
-      // TODO throw new TableNotExistException(name);
       // 这里使用StringBuilder来构造字符串，减少内存开销
       StringBuilder stringBuilder =
           new StringBuilder(storage_dir)
@@ -153,7 +150,6 @@ public class Database {
     }
   }
 
-  // 展示database中tableName表中的元数据 这里不太理解为什么要写在这里，我感觉这个应该在manager里面才比较正常
   public String show(String tableName) {
     try {
       lock.readLock().lock();
@@ -164,7 +160,23 @@ public class Database {
       lock.readLock().unlock();
     }
   }
-  // todo 这里还需要再看看
+
+  public String ToString() {
+    // 迭代值
+    String Top = "Database Name: " + name;
+    String result = Top + "\n" + "\n";
+    if (tables.isEmpty()) {
+      return "Empty database!";
+    }
+    for (Table the_table : tables.values()) {
+      if (the_table == null) {
+        continue;
+      }
+      result += the_table.show();
+    }
+    return result;
+  }
+
   /** 描述：建立单一querytable 参数：table name 返回：querytable */
   public QueryTable BuildSingleQueryTable(String table_name) {
     try {
@@ -177,7 +189,6 @@ public class Database {
     }
     throw new KeyNotExistException();
   }
-  // todo 这里还需要再看看
   /** 描述：建立复合querytable 参数：table names，join逻辑 返回：querytable */
   public QueryTable BuildJointQueryTable(ArrayList<String> table_names, Logic logic) {
     ArrayList<Table> my_tables = new ArrayList<>();
@@ -187,10 +198,12 @@ public class Database {
         if (!tables.containsKey(table_name)) throw new KeyNotExistException();
         my_tables.add(tables.get(table_name));
       }
+      return new JointTable(my_tables, logic);
+    } catch (Exception e) {
+      throw new KeyNotExistException();
     } finally {
       lock.readLock().unlock();
     }
-    return new JointTable(my_tables, logic);
   }
   // todo 这里还需要再看看
   public QueryResult select(
@@ -201,6 +214,8 @@ public class Database {
       QueryResult query_result = new QueryResult(the_table, columnsProjected, distinct);
       query_result.GenerateQueryRecords();
       return query_result;
+    } catch (KeyNotExistException e) {
+      throw e;
     } finally {
       lock.readLock().unlock();
     }
@@ -208,6 +223,7 @@ public class Database {
 
   public void insert(String tableName, String[] column_names, String[] values) {
     try {
+      lock.writeLock().lock();
       Table table = get(tableName);
       if (column_names == null) {
         for (int i = 0; i < values.length; i++) {
@@ -220,8 +236,9 @@ public class Database {
         }
         table.insert(column_names, values, false);
       }
-    } catch (Exception e){
+    } catch (RuntimeException e){
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -229,7 +246,12 @@ public class Database {
 
   public String update(String table_name, String column_name, Comparer value, Logic the_logic) {
     Table the_table = get(table_name);
-    return the_table.update(column_name, value, the_logic);
+    try{
+      return  the_table.update(column_name, value, the_logic);
+    } catch (RuntimeException e) {
+      e.printStackTrace();
+      throw e;
+    }
   }
 
   public String delete(String table_name, Logic the_logic) {

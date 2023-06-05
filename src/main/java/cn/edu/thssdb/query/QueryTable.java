@@ -9,14 +9,14 @@ import java.util.LinkedList;
 
 /** 描述：querytable父类 构造函数：无 */
 public abstract class QueryTable implements Iterator<Row> {
-  LinkedList<JointRow> mQueue;
-  Logic mLogicSelect;
-  boolean isFirst;
-  public ArrayList<Column> mColumns;
+  LinkedList<JointRow> mQueue; // 这个就是查询表的新结构
+  Logic mLogicSelect; // 选择逻辑
+  boolean isFirst; // 是否是第一个元素
+  public ArrayList<Column> mColumns; // 元数据信息
 
-  public abstract void PrepareNext();
+  public abstract void PrepareNext(); // 找到下一个符合条件的，放到队列里
 
-  public abstract ArrayList<MetaInfo> GenerateMetaInfo();
+  public abstract ArrayList<MetaInfo> GenerateMetaInfo(); // 返回元数据信息
 
   QueryTable() {
     this.mQueue = new LinkedList<>();

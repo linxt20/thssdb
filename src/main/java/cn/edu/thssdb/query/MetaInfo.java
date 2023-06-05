@@ -3,26 +3,28 @@ package cn.edu.thssdb.query;
 import cn.edu.thssdb.schema.Column;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 class MetaInfo {
 
   private String tableName;
-  private List<Column> columns;
+  public List<Column> columns;
+  private HashMap<String, Integer> columnIndex;
 
   MetaInfo(String tableName, ArrayList<Column> columns) {
     this.tableName = tableName;
     this.columns = columns;
+    this.columnIndex = new HashMap<>();
+    for (int i = 0; i < columns.size(); i++) {
+      columnIndex.put(columns.get(i).getName(), i);
+    }
   }
 
   /** 描述：找到对应列的位置 参数：列名 返回：位置i */
   int ColumnFind(String name) {
-    for (int i = 0; i < columns.size(); i++) {
-      if (columns.get(i).getName().equals(name)) {
-        return i;
-      }
-    }
-    return -1;
+    Integer index = columnIndex.get(name);
+    return index != null ? index : -1;
   }
 
   /** 描述：返回对应列全名 参数：列index 返回：全名，tablename.attrname */

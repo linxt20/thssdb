@@ -39,6 +39,6 @@ public class IServiceHandler implements IService.Iface {
       return new ExecuteStatementResp(
           StatusUtil.fail("You are not connected. Please connect first."), false);
     }
-    return ServiceRuntime.executeStatement(req.statement);
+    return ServiceRuntime.executeStatement(req.statement, req.getSessionId());
   }
 }

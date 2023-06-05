@@ -9,7 +9,7 @@ public class Row implements Serializable {
   private static final long serialVersionUID = -5809782578272943999L;
   protected ArrayList<Entry> entries;
 
-  protected int position; // 记录在哪一个
+  protected int position; // 记录在哪一个页面当中
 
   public Row() {
     this.entries = new ArrayList<>();
@@ -40,7 +40,8 @@ public class Row implements Serializable {
   public String toString() {
     if (entries == null) return "EMPTY";
     StringJoiner sj = new StringJoiner(", ");
-    for (Entry e : entries) sj.add(e.toString());
+    for (Entry e : entries)
+      sj.add(e.toString()); // 这里的e.toString()是Entry类的toString()方法，在Entry当中实现了null转化为字符串
     return sj.toString();
   }
 

@@ -17,17 +17,24 @@ public class Manager {
   private Database currentDB; // 当前正在使用的database
   private HashMap<String, Database> databases;
   private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  // 补充事务和锁的数据结构
+
+  public ArrayList<Long> transaction_sessions; // 处于transaction状态的session列表
+  public ArrayList<Long> session_queue; // 由于锁阻塞的session队列
+  public HashMap<Long, ArrayList<String>> s_lock_dict; // 记录每个session取得了哪些表的s锁
+  public HashMap<Long, ArrayList<String>> x_lock_dict; // 记录每个session取得了哪些表的x锁
 
   public static Manager getInstance() {
     return Manager.ManagerHolder.INSTANCE;
   }
 
   public Manager() {
-    // TODO
     System.out.println("Manager init");
     this.currentDB = null;
     this.databases = new HashMap<>();
+    transaction_sessions = new ArrayList<>();
+    session_queue = new ArrayList<>();
+    s_lock_dict = new HashMap<>();
+    x_lock_dict = new HashMap<>();
     recover();
   }
   // getdatabase函数是获取指定名字的database
@@ -57,7 +64,6 @@ public class Manager {
       lock.writeLock().lock();
       if (!databases.containsKey(dbName))
         throw new RuntimeException("Database " + dbName + " not exist");
-      // TODO throw new DatabaseNotExistException(dbName);
       currentDB = databases.get(dbName);
       System.out.println("Current database is " + dbName);
     } finally {
@@ -66,7 +72,6 @@ public class Manager {
   }
   // containdatabase函数是判断是否存在指定名字的database
   public boolean containDatabase(String dbName) {
-    // TODO
     try {
       lock.readLock().lock();
       return databases.containsKey(dbName);
@@ -84,7 +89,6 @@ public class Manager {
           lock.readLock().lock();
           if (!databases.containsKey(dbName))
             throw new RuntimeException("Database " + dbName + " not exist");
-          // TODO throw new DatabaseNotExistException(dbName);
           currentDB = databases.get(dbName);
         } finally {
           lock.readLock().unlock();
@@ -127,7 +131,7 @@ public class Manager {
     if (file.exists() && file.isFile()) {
       System.out.println("log file size: " + file.length() + " Byte");
       System.out.println("Read WAL log to recover database.");
-      ServiceRuntime.executeStatement("use " + databaseName);
+//      ServiceRuntime.executeStatement("use " + databaseName);
 
       try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
         String line;
@@ -153,7 +157,7 @@ public class Manager {
           last_cmd = transaction_list.get(transaction_list.size() - 1) - 1;
         }
         for (int i = 0; i <= last_cmd; i++) {
-          ServiceRuntime.executeStatement(lines.get(i));
+//          ServiceRuntime.executeStatement(lines.get(i));
         }
         System.out.println("read " + (last_cmd + 1) + " lines");
 

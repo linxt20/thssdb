@@ -22,15 +22,128 @@ import cn.edu.thssdb.plan.LogicalPlan;
 import cn.edu.thssdb.plan.impl.*;
 import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
+import cn.edu.thssdb.schema.Database;
+import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLBaseVisitor;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Pair;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+
+import static cn.edu.thssdb.utils.Global.storage_dir;
 
 public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
+  private long sessionId;
+  public ThssDBSQLVisitor(long sessionId) {
+    super();
+    this.sessionId = sessionId;
+  }
+
+  @Override
+  public LogicalPlan visitBeginTransactionStmt(SQLParser.BeginTransactionStmtContext ctx) {
+    try{
+      if (!Manager.getInstance().transaction_sessions.contains(sessionId)){
+        Manager.getInstance().transaction_sessions.add(sessionId);
+        ArrayList<String> s_lock_tables = new ArrayList<>();
+        ArrayList<String> x_lock_tables = new ArrayList<>();
+        Manager.getInstance().s_lock_dict.put(sessionId,s_lock_tables);
+        Manager.getInstance().x_lock_dict.put(sessionId,x_lock_tables);
+      }else{
+        System.out.println("session already in a transaction.");
+      }
+    }catch (Exception e){
+      throw new RuntimeException(e.getMessage());
+    }
+    return new BeginTransactionPlan();
+  }
+
+  @Override
+  public LogicalPlan visitAutoBeginTransactionStmt(SQLParser.AutoBeginTransactionStmtContext ctx) {
+    try{
+      if (!Manager.getInstance().transaction_sessions.contains(sessionId)){
+        Manager.getInstance().transaction_sessions.add(sessionId);
+        ArrayList<String> s_lock_tables = new ArrayList<>();
+        ArrayList<String> x_lock_tables = new ArrayList<>();
+        Manager.getInstance().s_lock_dict.put(sessionId,s_lock_tables);
+        Manager.getInstance().x_lock_dict.put(sessionId,x_lock_tables);
+      }else{
+        System.out.println("session already in a transaction.");
+      }
+    }catch (Exception e){
+      throw new RuntimeException(e.getMessage());
+    }
+    return new AutoBeginTransactionPlan();
+  }
+
+  @Override
+  public LogicalPlan visitCommitStmt(SQLParser.CommitStmtContext ctx) {
+    try{
+      if (Manager.getInstance().transaction_sessions.contains(sessionId)){
+        Database the_database = Manager.getInstance().getCurrentDB();
+        String db_name = the_database.getName();
+        Manager.getInstance().transaction_sessions.remove(sessionId);
+        ArrayList<String> table_list = Manager.getInstance().x_lock_dict.get(sessionId);
+        for (String table_name : table_list) {
+          Table the_table = the_database.get(table_name);
+          the_table.free_x_lock(sessionId);
+          the_table.quit_tran();
+        }
+        table_list.clear();
+        Manager.getInstance().x_lock_dict.put(sessionId,table_list);
+
+        String log_name = storage_dir + db_name + ".log";
+        File file = new File(log_name);
+        if(file.exists() && file.isFile() && file.length()>50000)
+        {
+          System.out.println("Clear database log");
+          try
+          {
+            FileWriter writer=new FileWriter(log_name);
+            writer.write( "");
+            writer.close();
+          } catch (IOException e)
+          {
+            e.printStackTrace();
+          }
+          Manager.getInstance().persist_database(db_name);
+        }
+      }else{
+        System.out.println("session not in a transaction.");
+      }
+    }catch (Exception e){
+      throw new RuntimeException(e.getMessage());
+    }
+    return new CommitPlan();
+  }
+
+  @Override
+  public LogicalPlan visitAutoCommitStmt(SQLParser.AutoCommitStmtContext ctx) {
+    try{
+      if (Manager.getInstance().transaction_sessions.contains(sessionId)){
+        Database the_database = Manager.getInstance().getCurrentDB();
+        Manager.getInstance().transaction_sessions.remove(sessionId);
+        ArrayList<String> table_list = Manager.getInstance().x_lock_dict.get(sessionId);
+        for (String table_name : table_list) {
+          Table the_table = the_database.get(table_name);
+          the_table.free_x_lock(sessionId);
+          the_table.quit_tran();
+        }
+        table_list.clear();
+        Manager.getInstance().x_lock_dict.put(sessionId,table_list);
+      }else{
+        System.out.println("session not in a transaction.");
+      }
+    }catch (Exception e){
+      throw new RuntimeException(e.getMessage());
+    }
+    return new AutoCommitPlan();
+  }
   @Override
   public LogicalPlan visitCreateDbStmt(SQLParser.CreateDbStmtContext ctx) {
     return new CreateDatabasePlan(ctx.databaseName().getText());

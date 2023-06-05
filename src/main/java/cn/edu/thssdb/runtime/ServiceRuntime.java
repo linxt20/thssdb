@@ -18,8 +18,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ServiceRuntime {
-  public static ExecuteStatementResp executeStatement(String statement) {
-    LogicalPlan plan = LogicalGenerator.generate(statement); // 这里会调用parser解析语句
+
+  public static ExecuteStatementResp executeStatement(String statement, long sessionId) {
+    LogicalPlan plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
     String name;
     switch (plan.getType()) {
       case CREATE_DB:
@@ -121,9 +122,9 @@ public class ServiceRuntime {
           }
           return new ExecuteStatementResp(StatusUtil.success(res), false);
         } catch (Exception e) {
-          QueryResult error_result = new QueryResult(e.toString());
+          //QueryResult error_result = new QueryResult(e.toString());
           // return error_result;
-          return new ExecuteStatementResp(StatusUtil.fail("Exception"), false);
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case INSERT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
@@ -140,8 +141,11 @@ public class ServiceRuntime {
           }
           try {
             Manager.getInstance().getCurrentDB().insert(table_name, column_names, values);
-          } catch (Exception e) {
-            System.out.println(e.getMessage());
+          } catch (RuntimeException e) {
+            System.out.println("entered catch");
+            return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+            //System.out.println(e.getMessage());
+            //return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
           }
         }
         return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
@@ -175,6 +179,8 @@ public class ServiceRuntime {
           System.out.println(e.getMessage());
         }
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
+//      case :
+
 
       default:
     }

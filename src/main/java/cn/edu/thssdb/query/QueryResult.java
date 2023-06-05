@@ -52,12 +52,20 @@ public class QueryResult {
     }
     // 没有选中任何列，那就全部返回
     else {
-      int offset = 0;
+      int offset = 0, joinjudge = 1;
+      if (mMetaInfoList.size() == 1) {
+        joinjudge = 0;
+      }
       for (MetaInfo metaInfo : mMetaInfoList) {
         for (int i = 0; i < metaInfo.GetColumnSize(); i++) {
-          String full_name = metaInfo.GetFullName(i);
+          String name;
+          if (joinjudge == 1) {
+            name = metaInfo.GetFullName(i);
+          } else {
+            name = metaInfo.columns.get(i).getName();
+          }
           this.mColumnIndex.add(offset + i);
-          this.mColumnName.add(full_name);
+          this.mColumnName.add(name);
         }
         offset += metaInfo.GetColumnSize();
       }
@@ -83,7 +91,7 @@ public class QueryResult {
   private String[] SplitColumnName(String full_name) {
     String[] splited_name = full_name.split("\\.");
     if (splited_name.length != 2) {
-      // throw new AttributeInvalidException(full_name);
+      throw new RuntimeException("AttributeInvalidException" + full_name);
     }
     return splited_name;
   }
@@ -105,9 +113,9 @@ public class QueryResult {
         total_index += mMetaInfoList.get(i).GetColumnSize();
       }
       if (equal_sum < 1) {
-        // throw new AttributeNotFoundException(column_name);
+        throw new RuntimeException("AttributeNotFoundException" + column_name);
       } else if (equal_sum > 1) {
-        // throw new AttributeCollisionException(column_name);
+        throw new RuntimeException("AttributeCollisionException" + column_name);
       }
     }
     // tablename.columnname
@@ -132,7 +140,7 @@ public class QueryResult {
         }
       }
       if (whether_find == false) {
-        // throw new AttributeNotFoundException(column_name);
+        throw new RuntimeException("AttributeNotFoundException" + column_name);
       }
     }
     return index;

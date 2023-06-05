@@ -48,8 +48,7 @@ public class Condition {
 
       // 待比较的类型不一样，报错
       if (type_left != type_right) {
-        System.out.println("TypeNotMatchException(type_left, type_right)");
-        // throw new TypeNotMatchException(type_left, type_right);
+        throw new RuntimeException("TypeNotMatchException(type_left, type_right)");
       } else {
         // 比较
         boolean result = false;
@@ -80,7 +79,6 @@ public class Condition {
         }
       }
     }
-    return ResultType.UNKNOWN;
   }
 
   /** 描述：计算当前条件的运算结果，仅限左右都不是column的情况 参数：无 返回：结果类型 */

@@ -24,7 +24,9 @@ public class Entry implements Comparable<Entry>, Serializable {
   }
 
   public String toString() {
-    if (value == null) return "null";
+    if (value == null) {
+      return "null";
+    }
     return value.toString();
   }
 
