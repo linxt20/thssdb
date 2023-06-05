@@ -320,4 +320,13 @@ public class Database {
       lock.writeLock().unlock();
     }
   }
+
+  public List<String> getTableNames() {
+    try {
+      lock.readLock().lock();
+      return new ArrayList<>(tables.keySet());
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
 }

@@ -98,6 +98,17 @@ public class ServiceRuntime {
         String ret = Manager.getInstance().getCurrentDB().show(name.toLowerCase());
         return new ExecuteStatementResp(StatusUtil.success(ret), false);
 
+      case SHOW_DATABASES:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        ShowDatabasesPlan showDatabasesPlan = (ShowDatabasesPlan) plan;
+        String ret1 = Manager.getInstance().showDatabases();
+        return new ExecuteStatementResp(StatusUtil.success(ret1), false);
+      case SHOW_DATABASE_META:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        ShowDatabaseMetaPlan showDatabaseMetaPlan = (ShowDatabaseMetaPlan) plan;
+        name = showDatabaseMetaPlan.getDatabaseName();
+        String ret2 = Manager.getInstance().showDatabaseMeta(name.toLowerCase());
+        return new ExecuteStatementResp(StatusUtil.success(ret2), false);
       case DROP_TABLE:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         DropTablePlan dropTablePlan = (DropTablePlan) plan;
