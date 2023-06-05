@@ -86,6 +86,7 @@ public class CRUDTestExecutor extends TestExecutor {
           }
         }
         sb.append(");");
+        System.out.println(sb.toString());
         client.executeStatement(sb.toString());
         tableData.add(rowData);
       }
@@ -155,7 +156,7 @@ public class CRUDTestExecutor extends TestExecutor {
 
     // query join on column1
     querySql =
-        "select column1,test_table3.column2,test_table4.column2 from test_table3 join test_table4 on test_table3.column1 = test_table4.column1;";
+        "select test_table3.column1,test_table3.column2,test_table4.column2 from test_table3 join test_table4 on test_table3.column1 = test_table4.column1;";
     resp = client.executeStatement(querySql);
     tableSchema = dataGenerator.getTableSchema("test_table3");
     resultTypes.clear();
@@ -171,7 +172,7 @@ public class CRUDTestExecutor extends TestExecutor {
     expectedResult = new HashSet<>();
     for (List<Object> leftRowData : leftTableData) {
       for (List<Object> rightRowData : rightTableData) {
-        if (leftRowData.get(1) == rightRowData.get(1)) {
+        if (leftRowData.get(1).equals(rightRowData.get(1))) {
           List<Object> resultRowData = new ArrayList<>();
           resultRowData.add(leftRowData.get(1));
           resultRowData.add(leftRowData.get(2));
@@ -185,7 +186,7 @@ public class CRUDTestExecutor extends TestExecutor {
 
     // query join on column1 where column1 = 5;
     querySql =
-        "select column1,test_table3.column2,test_table4.column2 from test_table3 join test_table4 on test_table3.column1 = test_table4.column1 where column1 = 5;";
+        "select test_table3.column1,test_table3.column2,test_table4.column2 from test_table3 join test_table4 on test_table3.column1 = test_table4.column1 where test_table3.column1 = 5;";
     resp = client.executeStatement(querySql);
     tableSchema = dataGenerator.getTableSchema("test_table3");
     resultTypes.clear();
@@ -201,7 +202,7 @@ public class CRUDTestExecutor extends TestExecutor {
     expectedResult = new HashSet<>();
     for (List<Object> leftRowData : leftTableData) {
       for (List<Object> rightRowData : rightTableData) {
-        if (leftRowData.get(1) == rightRowData.get(1) && (long) leftRowData.get(1) == 5) {
+        if (leftRowData.get(1).equals(rightRowData.get(1)) && (long) leftRowData.get(1) == 5) {
           List<Object> resultRowData = new ArrayList<>();
           resultRowData.add(leftRowData.get(1));
           resultRowData.add(leftRowData.get(2));
@@ -214,7 +215,7 @@ public class CRUDTestExecutor extends TestExecutor {
     Assert.assertTrue(equals(queryResult, expectedResult));
     // query join on column1 where column3 = 5;
     querySql =
-        "select column1,test_table3.column3,test_table4.column2 from test_table3 join test_table4 on test_table3.column1 = test_table4.column1 where test_table3.column3 = 5;";
+        "select test_table3.column1,test_table3.column3,test_table4.column2 from test_table3 join test_table4 on test_table3.column1 = test_table4.column1 where test_table3.column3 = 5;";
     resp = client.executeStatement(querySql);
     tableSchema = dataGenerator.getTableSchema("test_table3");
     resultTypes.clear();
@@ -230,7 +231,7 @@ public class CRUDTestExecutor extends TestExecutor {
     expectedResult = new HashSet<>();
     for (List<Object> leftRowData : leftTableData) {
       for (List<Object> rightRowData : rightTableData) {
-        if (leftRowData.get(1) == rightRowData.get(1) && (double) leftRowData.get(3) == 5) {
+        if (leftRowData.get(1).equals(rightRowData.get(1)) && (double) leftRowData.get(3) == 5) {
           List<Object> resultRowData = new ArrayList<>();
           resultRowData.add(leftRowData.get(1));
           resultRowData.add(leftRowData.get(3));
@@ -250,7 +251,7 @@ public class CRUDTestExecutor extends TestExecutor {
     Set<List<Object>> tableData = dataMap.get("test_table2");
     for (List<Object> rowData : tableData) {
       if ((float) rowData.get(2) == 50) {
-        rowData.set(2, 100);
+        rowData.set(2, 100f);
       }
     }
 
@@ -275,7 +276,7 @@ public class CRUDTestExecutor extends TestExecutor {
     tableData = dataMap.get("test_table3");
     for (List<Object> rowData : tableData) {
       if ((float) rowData.get(2) == 50) {
-        rowData.set(3, 100);
+        rowData.set(3, 100d);
       }
     }
 
@@ -319,9 +320,9 @@ public class CRUDTestExecutor extends TestExecutor {
   private boolean check(String type, Object expectValue, String actualValue) {
     switch (type) {
       case "int":
-        return expectValue == Integer.valueOf(actualValue);
+        return expectValue.equals(Integer.valueOf(actualValue));
       case "long":
-        return expectValue == Long.valueOf(actualValue);
+        return expectValue.equals(Long.valueOf(actualValue));
       case "float":
         return Objects.equals(expectValue, Float.valueOf(actualValue));
       case "double":

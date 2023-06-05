@@ -6,6 +6,8 @@ import cn.edu.thssdb.exception.NullValueException;
 import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.storage.Cache;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.type.ComparerType;
+import cn.edu.thssdb.type.ResultType;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
@@ -294,7 +296,7 @@ public class Table implements Iterable<Row> {
       throw new RuntimeException("Err: AttributeNotFoundException:" + column_name);
     }
     for (Row row : this) { // this是table的迭代器,row是table的行
-      JointRow the_row = new JointRow(row, this);
+      QueryRow the_row = new QueryRow(row, this);
       if (the_logic == null || the_logic.GetResult(the_row) == ResultType.TRUE) {
         Entry primary_entry = row.getEntries().get(primaryIndex);
         // 值处理，合法性判断
@@ -374,10 +376,10 @@ public class Table implements Iterable<Row> {
   //   insert函数将传入的列数据按照当前table的列顺序插入到cache中
   public void insert(String[] column_list, String[] value_list, boolean in_tran) {
     System.out.println("insert column list");
-    if (column_list == null || value_list == null)  return;
+    if (column_list == null || value_list == null) return;
     int len = this.columns.size(); // 当前表的列数
     // 如果输入的value和columns个数对不上或者输入的column比表中的column还多，报错并返回 TODO 报错
-    if(column_list.length != value_list.length || column_list.length > len){
+    if (column_list.length != value_list.length || column_list.length > len) {
       throw new RuntimeException("Err: insert column list length not match value list length");
     }
     // 将entries按照当前table列的顺序排序
@@ -395,22 +397,24 @@ public class Table implements Iterable<Row> {
       new_value_list[i] = value_list[i];
     }
     if (column_list.length < len) {
-      System.out.println("Input columns size less than table's columns size: " + column_list.length);
+      System.out.println(
+          "Input columns size less than table's columns size: " + column_list.length);
       // 这里输入的columns少于table的columns个数，需要判断是否缺少not null的类
-        int i = 0, column_list_index = column_list.length;
-        for (Column column : this.columns) {
-            if (column_index.get(column.getName()) == null) {
-              if(column.NotNull()){
-                System.out.println("缺少not null的列: " + column.getName());
-                throw new RuntimeException("Err: 缺少not null的列: " + column.getName());
-              }
-              System.out.println("column_list_index: " + column_list_index + " column: " + column.getName());
-              new_value_list[column_list_index] = "null";  // 把缺少的列的值设置为null
-              column_index.put(column.getName(), column_list_index);
-              column_list_index++;
-            }
-            i++;
+      int i = 0, column_list_index = column_list.length;
+      for (Column column : this.columns) {
+        if (column_index.get(column.getName()) == null) {
+          if (column.NotNull()) {
+            System.out.println("缺少not null的列: " + column.getName());
+            throw new RuntimeException("Err: 缺少not null的列: " + column.getName());
+          }
+          System.out.println(
+              "column_list_index: " + column_list_index + " column: " + column.getName());
+          new_value_list[column_list_index] = "null"; // 把缺少的列的值设置为null
+          column_index.put(column.getName(), column_list_index);
+          column_list_index++;
         }
+        i++;
+      }
     }
     for (Column column : this.columns) {
       System.out.println("index: " + column_index.get(column.getName()));
@@ -449,7 +453,7 @@ public class Table implements Iterable<Row> {
   public String delete(Logic the_logic) {
     int count = 0;
     for (Row row : this) {
-      JointRow the_row = new JointRow(row, this);
+      QueryRow the_row = new QueryRow(row, this);
       if (the_logic == null || the_logic.GetResult(the_row) == ResultType.TRUE) {
         Entry primary_entry = row.getEntries().get(primaryIndex);
         delete(primary_entry, false); // 这里加了一个false，后面修改需要注意一下

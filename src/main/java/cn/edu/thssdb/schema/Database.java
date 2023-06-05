@@ -89,8 +89,7 @@ public class Database {
     }
     try {
       lock.writeLock().lock();
-      if (tables.containsKey(name)) throw new RuntimeException("Database create table error");
-
+      if (tables.containsKey(name)) throw new RuntimeException("Database create table error: table already exists");
       Table new_table = new Table(this.name, name, columns);
       tables.put(name, new_table);
       persist_table(new_table); // 这里修改为只写入新建的table的元数据，不用重复写入所有table的元数据
@@ -182,7 +181,7 @@ public class Database {
     try {
       lock.readLock().lock();
       if (tables.containsKey(table_name)) {
-        return new SingleTable(tables.get(table_name));
+        return new SingleQueryTable(tables.get(table_name));
       }
     } finally {
       lock.readLock().unlock();
@@ -198,7 +197,7 @@ public class Database {
         if (!tables.containsKey(table_name)) throw new KeyNotExistException();
         my_tables.add(tables.get(table_name));
       }
-      return new JointTable(my_tables, logic);
+      return new MultiQueryTable(my_tables, logic);
     } catch (Exception e) {
       throw new KeyNotExistException();
     } finally {
@@ -236,7 +235,7 @@ public class Database {
         }
         table.insert(column_names, values, false);
       }
-    } catch (RuntimeException e){
+    } catch (RuntimeException e) {
       e.printStackTrace();
       throw e;
     } finally {
@@ -246,8 +245,8 @@ public class Database {
 
   public String update(String table_name, String column_name, Comparer value, Logic the_logic) {
     Table the_table = get(table_name);
-    try{
-      return  the_table.update(column_name, value, the_logic);
+    try {
+      return the_table.update(column_name, value, the_logic);
     } catch (RuntimeException e) {
       e.printStackTrace();
       throw e;
@@ -317,20 +316,6 @@ public class Database {
       persist();
     } catch (Exception e) {
       throw e;
-    } finally {
-      lock.writeLock().unlock();
-    }
-  }
-  // 这里是取消指定table_list的事务，参数有需要可以改为ArrayList<String>
-  public void quit_tran_tables(String[] table_name_list) {
-    try {
-      lock.writeLock().lock();
-      for (String table_name : table_name_list) {
-        if (!tables.containsKey(table_name)) {
-          throw new RuntimeException("Table " + table_name + " not exist");
-        }
-        tables.get(table_name).quit_tran();
-      }
     } finally {
       lock.writeLock().unlock();
     }

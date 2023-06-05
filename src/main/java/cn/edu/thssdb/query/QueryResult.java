@@ -4,6 +4,7 @@ import cn.edu.thssdb.schema.Entry;
 import cn.edu.thssdb.schema.Row;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -12,10 +13,10 @@ public class QueryResult {
   private QueryTable mTable;
   private ArrayList<MetaInfo> mMetaInfoList;
   private boolean mWhetherDistinct;
-  private HashSet<String> mHashSet;
+  private HashSet<String> mHashSet = null; // 用于distinct语句
   public boolean mWhetherRight;
-  public String mErrorMessage;
   public ArrayList<Integer> mColumnIndex;
+  public HashMap<String, Integer> mColumnIndexMap = null;
   public List<String> mColumnName;
   public ArrayList<Row> mResultList;
 
@@ -25,17 +26,10 @@ public class QueryResult {
     this.mWhetherDistinct = whetherDistinct;
     this.mHashSet = new HashSet<>();
     mWhetherRight = true;
-    mErrorMessage = "";
     this.mMetaInfoList = new ArrayList<MetaInfo>();
     this.mMetaInfoList.addAll(queryTable.GenerateMetaInfo());
     this.mResultList = new ArrayList<Row>();
     InitColumns(selectColumns);
-  }
-
-  // 异常构造函数
-  public QueryResult(String errorMessge) {
-    mWhetherRight = false;
-    mErrorMessage = errorMessge;
   }
 
   /** 描述：按照传入时候选中的列，初始化queryresult的各列信息 参数：选中的列 返回：无 */
@@ -49,97 +43,58 @@ public class QueryResult {
         this.mColumnIndex.add(GetColumnIndex(column_name));
         this.mColumnName.add(column_name);
       }
+    } else {
+      throw new RuntimeException("You haven't selected any column!");
     }
-    // 没有选中任何列，那就全部返回
-    else {
-      int offset = 0, joinjudge = 1;
-      if (mMetaInfoList.size() == 1) {
-        joinjudge = 0;
-      }
-      for (MetaInfo metaInfo : mMetaInfoList) {
-        for (int i = 0; i < metaInfo.GetColumnSize(); i++) {
-          String name;
-          if (joinjudge == 1) {
-            name = metaInfo.GetFullName(i);
-          } else {
-            name = metaInfo.columns.get(i).getName();
-          }
-          this.mColumnIndex.add(offset + i);
-          this.mColumnName.add(name);
-        }
-        offset += metaInfo.GetColumnSize();
-      }
-    }
+    // 没有选中任何列，那就全部返回 ？？这是在干什么
+    //    else {
+    //      int offset = 0, joinjudge = 1;
+    //      if (mMetaInfoList.size() == 1) {
+    //        joinjudge = 0;
+    //      }
+    //      for (MetaInfo metaInfo : mMetaInfoList) {
+    //        for (int i = 0; i < metaInfo.GetColumnSize(); i++) {
+    //          String name;
+    //          if (joinjudge == 1) {
+    //            name = metaInfo.GetFullName(i);
+    //          } else {
+    //            name = metaInfo.columns.get(i).getName();
+    //          }
+    //          this.mColumnIndex.add(offset + i);
+    //          this.mColumnName.add(name);
+    //        }
+    //        offset += metaInfo.GetColumnSize();
+    //      }
+    //    }
   }
 
-  /** 描述：将选中的列（meta信息）转化为字符串输出 参数：无 返回：输出字符串 */
-  public String MetaToString() {
-    String result = "";
-    for (int i = 0; i < mColumnName.size(); i++) {
-      result += mColumnName.get(i);
-      if (i != mColumnName.size() - 1) {
-        result += ", ";
-      }
-    }
-    return result;
-  }
-
-  /**
-   * 描述：将TableName.ColumnName形式的变量拆分出TableName,ColumnName 参数：全名
-   * 返回：一个长度为2的数组，0号是tablename，1号是columnname
-   */
-  private String[] SplitColumnName(String full_name) {
-    String[] splited_name = full_name.split("\\.");
-    if (splited_name.length != 2) {
-      throw new RuntimeException("AttributeInvalidException" + full_name);
-    }
-    return splited_name;
-  }
-
-  /** 描述：找到一个列名在index对应的位置 参数：列名 返回：位置 */
+  /** 描述：找到一个列名在index对应的位置，这里位置指的是在合并后的row中的位置 参数：列名 返回：位置 */
   public int GetColumnIndex(String column_name) {
     int index = 0;
-
-    // 只有columnname
+    // 如果只有columnname，则说明不是join的table，直接找就行了
     if (!column_name.contains(".")) {
-      int equal_sum = 0;
-      int total_index = 0;
-      for (int i = 0; i < mMetaInfoList.size(); i++) {
-        int current_index = mMetaInfoList.get(i).ColumnFind(column_name);
-        if (current_index >= 0) {
-          equal_sum++;
-          index = current_index + total_index;
-        }
-        total_index += mMetaInfoList.get(i).GetColumnSize();
-      }
-      if (equal_sum < 1) {
+      index = mMetaInfoList.get(0).ColumnFind(column_name);
+      if (index < 0) {
         throw new RuntimeException("AttributeNotFoundException" + column_name);
-      } else if (equal_sum > 1) {
-        throw new RuntimeException("AttributeCollisionException" + column_name);
       }
     }
-    // tablename.columnname
+    // 如果是tablename.columnname这样的（join操作要求必须使用这种形式）
     else {
-      String[] splited_names = SplitColumnName(column_name);
-      String table_name = splited_names[0];
-      String entry_name = splited_names[1];
-      boolean whether_find = false;
-      int total_index = 0;
-      for (int i = 0; i < mMetaInfoList.size(); i++) {
-        String current_name = mMetaInfoList.get(i).GetTableName();
-        if (!current_name.equals(table_name)) {
-          total_index += mMetaInfoList.get(i).GetColumnSize();
-          continue;
-        }
-
-        int current_index = mMetaInfoList.get(i).ColumnFind(entry_name);
-        if (current_index >= 0) {
-          whether_find = true;
-          index = current_index + total_index;
-          break;
+      // 则建立一个HashMap，key是columnname，value是这个table在new_row中的index
+      if (mColumnIndexMap == null) {
+        mColumnIndexMap = new HashMap<>();
+        int offset = 0;
+        for (MetaInfo metaInfo : mMetaInfoList) {
+          for (int i = 0; i < metaInfo.GetColumnSize(); i++) {
+            String name = metaInfo.GetFullName(i);
+            mColumnIndexMap.put(name, offset + i);
+          }
+          offset += metaInfo.GetColumnSize();
         }
       }
-      if (whether_find == false) {
+      if (mColumnIndexMap.containsKey(column_name)) {
+        index = mColumnIndexMap.get(column_name);
+      } else {
         throw new RuntimeException("AttributeNotFoundException" + column_name);
       }
     }
@@ -149,7 +104,7 @@ public class QueryResult {
   /** 描述：获取所有搜索结果 参数：无 返回：所有搜索结果，返回的每个row都是和mColumnName一一对应的，如果distinct还会用哈希判重 */
   public void GenerateQueryRecords() {
     while (mTable.hasNext()) {
-      JointRow new_row = mTable.next();
+      QueryRow new_row = mTable.next();
       if (new_row == null) {
         break;
       }

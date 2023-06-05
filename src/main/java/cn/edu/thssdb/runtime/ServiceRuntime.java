@@ -20,7 +20,26 @@ import java.util.List;
 public class ServiceRuntime {
 
   public static ExecuteStatementResp executeStatement(String statement, long sessionId) {
-    LogicalPlan plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
+    statement = statement.trim();
+    String cmd = statement.split("\\s+")[0];
+    LogicalPlan plan;
+    if ((cmd.toLowerCase().equals("insert")
+            || cmd.toLowerCase().equals("update")
+            || cmd.toLowerCase().equals("delete")
+            || cmd.toLowerCase().equals("select"))
+        && !Manager.getInstance().transaction_sessions.contains(sessionId)) {
+      LogicalGenerator.generate("autobegin transaction", sessionId);
+      try {
+        plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
+      } catch (Exception e) {
+        return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+      }
+      LogicalGenerator.generate("autocommit", sessionId);
+
+    } else {
+      plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
+    }
+
     String name;
     switch (plan.getType()) {
       case CREATE_DB:
@@ -60,13 +79,17 @@ public class ServiceRuntime {
           return new ExecuteStatementResp(StatusUtil.fail("Database does not exist."), false);
         }
       case CREATE_TABLE:
-        // TODO 检查table是否已经存在～
-        System.out.println("IServiceHandler: [DEBUG] " + plan);
-        CreateTablePlan createTablePlan = (CreateTablePlan) plan;
-        name = createTablePlan.getTableName();
-        Column[] columns = createTablePlan.getColumns();
-        Manager.getInstance().getCurrentDB().create(name.toLowerCase(), columns);
-        return new ExecuteStatementResp(StatusUtil.success("Table " + name + " created."), false);
+        // 在create当中就完成了table是否已经存在的判断
+        try {
+          System.out.println("IServiceHandler: [DEBUG] " + plan);
+          CreateTablePlan createTablePlan = (CreateTablePlan) plan;
+          name = createTablePlan.getTableName();
+          Column[] columns = createTablePlan.getColumns();
+          Manager.getInstance().getCurrentDB().create(name.toLowerCase(), columns);
+          return new ExecuteStatementResp(StatusUtil.success("Table " + name + " created."), false);
+        } catch (Exception e) {
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+        }
 
       case SHOW_TABLE:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
@@ -83,53 +106,48 @@ public class ServiceRuntime {
         return new ExecuteStatementResp(StatusUtil.success("Table " + name + " dropped."), false);
 
       case SELECT:
-        System.out.println("IServiceHandler: [DEBUG] " + plan);
-        SelectPlan selectPlan = (SelectPlan) plan;
-        String[] columnsName = selectPlan.getColumns();
-        ArrayList<String> tableNames = selectPlan.getTableNames();
-        QueryTable queryTable = null; // = selectPlan.getQueryTable();
-        Logic logicForJoin = selectPlan.getLogicForJoin();
-        Logic logic = selectPlan.getLogic();
-        Boolean distinct = selectPlan.getDistinct();
-        // 如果没有join，即为单一表查询
-        if (logicForJoin == null) {
-          if (tableNames.size() != 1) {
-            return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
-          }
-          queryTable =
-              Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
-        }
-        // 如果是复合表，需要读取join逻辑
-        else {
-          queryTable =
-              Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
-        }
-
-        // TODO 后面要进行字符串处理哈哈哈哈这个太随便了
-        String res = "";
         try {
+          System.out.println("IServiceHandler: [DEBUG] " + plan);
+          SelectPlan selectPlan = (SelectPlan) plan;
+          String[] columnsName = selectPlan.getColumns();
+          ArrayList<String> tableNames = selectPlan.getTableNames();
+          QueryTable queryTable = null; // = selectPlan.getQueryTable();
+          Logic logicForJoin = selectPlan.getLogicForJoin();
+          Logic logic = selectPlan.getLogic();
+          Boolean distinct = selectPlan.getDistinct();
+          // 如果没有join，即为单一表查询
+          if (logicForJoin == null) {
+            if (tableNames.size() != 1) {
+              return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
+            }
+            queryTable =
+                Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
+          }
+          // 如果是复合表，需要读取join逻辑
+          else {
+            queryTable =
+                Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
+          }
+
+          ExecuteStatementResp resp =  new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
               Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
           for (String column_name : result.mColumnName) {
-            res += column_name.toString() + ", ";
+            resp.addToColumnsList(column_name);
           }
-          res += "\n------------------\n";
           for (Row row : result.mResultList) {
             ArrayList<String> the_result = row.toStringList();
-            String tmp = the_result.toString();
-            tmp = tmp.substring(1, tmp.length() - 1);
-            res += tmp + "\n";
+            resp.addToRowList(the_result);
           }
-          return new ExecuteStatementResp(StatusUtil.success(res), false);
+          return resp;
         } catch (Exception e) {
-          //QueryResult error_result = new QueryResult(e.toString());
+          // QueryResult error_result = new QueryResult(e.toString());
           // return error_result;
           return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case INSERT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         InsertPlan insertPlan = (InsertPlan) plan;
-        // TODO read commit锁 目前先不加
         String table_name = insertPlan.getTableName();
         String[] column_names = insertPlan.getColumnNames();
         List<SQLParser.ValueEntryContext> value_entrys = insertPlan.getValueEntryContextList();
@@ -144,19 +162,19 @@ public class ServiceRuntime {
           } catch (RuntimeException e) {
             System.out.println("entered catch");
             return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
-            //System.out.println(e.getMessage());
-            //return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+            // System.out.println(e.getMessage());
+            // return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
           }
         }
         return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
       case UPDATE:
-        System.out.println("IServiceHandler: [DEBUG] " + plan);
-        UpdatePlan updatePlan = (UpdatePlan) plan;
-        String table_name_for_update = updatePlan.getTableName();
-        String column_name_for_update = updatePlan.getColumnName();
-        Comparer value_for_update = updatePlan.getValue();
-        Logic logic_for_update = updatePlan.getLogic();
         try {
+          System.out.println("IServiceHandler: [DEBUG] " + plan);
+          UpdatePlan updatePlan = (UpdatePlan) plan;
+          String table_name_for_update = updatePlan.getTableName();
+          String column_name_for_update = updatePlan.getColumnName();
+          Comparer value_for_update = updatePlan.getValue();
+          Logic logic_for_update = updatePlan.getLogic();
           Manager.getInstance()
               .getCurrentDB()
               .update(
@@ -164,10 +182,11 @@ public class ServiceRuntime {
                   column_name_for_update,
                   value_for_update,
                   logic_for_update);
+          return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
         } catch (Exception e) {
           System.out.println(e.getMessage());
+            return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
-        return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
       case DELETE:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         DeletePlan deletePlan = (DeletePlan) plan;
@@ -179,8 +198,20 @@ public class ServiceRuntime {
           System.out.println(e.getMessage());
         }
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
-//      case :
-
+      case BEGIN_TRANSACTION:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(
+            StatusUtil.success("Begin transaction successfully."), false);
+      case COMMIT:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(StatusUtil.success("Commit successfully."), false);
+      case AUTO_BEGIN_TRANSACTION:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(
+            StatusUtil.success("Auto begin transaction successfully."), false);
+      case AUTO_COMMIT:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        return new ExecuteStatementResp(StatusUtil.success("Auto commit successfully."), false);
 
       default:
     }

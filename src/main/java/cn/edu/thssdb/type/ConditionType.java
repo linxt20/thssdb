@@ -1,4 +1,4 @@
-package cn.edu.thssdb.query;
+package cn.edu.thssdb.type;
 
 /** EQ:= NE:<> GT:> LT:< GE:>= LE:<= */
 public enum ConditionType {

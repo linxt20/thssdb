@@ -34,13 +34,12 @@ import java.util.Arrays;
 
 public class LogicalGenerator {
 
-  private static String[] wal_flag = {"insert","delete","update","begin","commit"};
+  private static String[] wal_flag = {"insert", "delete", "update", "begin", "commit"};
 
-  public static LogicalPlan generate(String sql,long sessionId) throws ParseCancellationException {
+  public static LogicalPlan generate(String sql, long sessionId) throws ParseCancellationException {
     String cmd = sql.split("\\s+")[0];
 
-    if(Arrays.asList(wal_flag).contains(cmd.toLowerCase()) && sessionId==0)
-    {
+    if (Arrays.asList(wal_flag).contains(cmd.toLowerCase()) && sessionId == 0) {
       Manager.getInstance().write_log(sql);
     }
 
@@ -83,6 +82,10 @@ public class LogicalGenerator {
       tree = parser2.sqlStmt();
       // if we get here, it's LL not SLL
     }
-    return dbsqlVisitor.visit(tree);
+    try {
+      return dbsqlVisitor.visit(tree);
+    } catch (RuntimeException e) {
+      throw e;
+    }
   }
 }

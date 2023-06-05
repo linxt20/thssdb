@@ -2,8 +2,6 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.type.ColumnType;
 
-import java.util.regex.Pattern;
-
 public class Column implements Comparable<Column> {
   private String name;
   private ColumnType type;
@@ -65,24 +63,5 @@ public class Column implements Comparable<Column> {
       ret += "\tnot null";
     }
     return ret;
-  }
-
-  public static ColumnType str2DataType(String strType) {
-    switch (strType.toLowerCase()) {
-      case "string":
-        return ColumnType.STRING;
-      case "int":
-        return ColumnType.INT;
-      case "long":
-        return ColumnType.LONG;
-      case "float":
-        return ColumnType.FLOAT;
-      case "double":
-        return ColumnType.DOUBLE;
-    }
-    if (Pattern.matches("string\\([0-9]+\\)", strType.toLowerCase())) {
-      return ColumnType.STRING;
-    }
-    return ColumnType.INT;
   }
 }
