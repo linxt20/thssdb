@@ -137,7 +137,7 @@ public class QueryResult {
   /** 描述：获取所有搜索结果 参数：无 返回：所有搜索结果，返回的每个row都是和mColumnName一一对应的，如果distinct还会用哈希判重 */
   public void GenerateQueryRecords() {
     while (mTable.hasNext()) {
-      JointRow new_row = mTable.next();
+      QueryRow new_row = mTable.next();
       if (new_row == null) {
         break;
       }

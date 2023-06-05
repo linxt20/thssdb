@@ -23,14 +23,17 @@ public class ServiceRuntime {
     statement = statement.trim();
     String cmd = statement.split("\\s+")[0];
     LogicalPlan plan;
-    if ((cmd.toLowerCase().equals("insert") || cmd.toLowerCase().equals("update") ||
-            cmd.toLowerCase().equals("delete") || cmd.toLowerCase().equals("select")) && !Manager.getInstance().transaction_sessions.contains(sessionId)) {
+    if ((cmd.toLowerCase().equals("insert")
+            || cmd.toLowerCase().equals("update")
+            || cmd.toLowerCase().equals("delete")
+            || cmd.toLowerCase().equals("select"))
+        && !Manager.getInstance().transaction_sessions.contains(sessionId)) {
       LogicalGenerator.generate("autobegin transaction", sessionId);
-      plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
+      plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
       LogicalGenerator.generate("autocommit", sessionId);
 
     } else {
-      plan = LogicalGenerator.generate(statement,sessionId); // 这里会调用parser解析语句
+      plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
     }
 
     String name;
@@ -187,13 +190,15 @@ public class ServiceRuntime {
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
       case BEGIN_TRANSACTION:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
-        return new ExecuteStatementResp(StatusUtil.success("Begin transaction successfully."), false);
+        return new ExecuteStatementResp(
+            StatusUtil.success("Begin transaction successfully."), false);
       case COMMIT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         return new ExecuteStatementResp(StatusUtil.success("Commit successfully."), false);
       case AUTO_BEGIN_TRANSACTION:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
-        return new ExecuteStatementResp(StatusUtil.success("Auto begin transaction successfully."), false);
+        return new ExecuteStatementResp(
+            StatusUtil.success("Auto begin transaction successfully."), false);
       case AUTO_COMMIT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         return new ExecuteStatementResp(StatusUtil.success("Auto commit successfully."), false);

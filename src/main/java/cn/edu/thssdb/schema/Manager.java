@@ -166,14 +166,14 @@ public class Manager {
 
         if (transaction_list.size() != commit_list.size()) {
           start_cmd = transaction_list.get(transaction_list.size() - 1);
-//          // redo
-//          for (int i = start_cmd; i < index; i++) {
-//            ServiceRuntime.executeStatement(lines.get(i),0);
-//          }
-//          // undo
-//          for (int i = index-1; i >= start_cmd; i--) {
-//            ServiceRuntime.executeStatement(lines.get(i),0);
-//          }
+          //          // redo
+          //          for (int i = start_cmd; i < index; i++) {
+          //            ServiceRuntime.executeStatement(lines.get(i),0);
+          //          }
+          //          // undo
+          //          for (int i = index-1; i >= start_cmd; i--) {
+          //            ServiceRuntime.executeStatement(lines.get(i),0);
+          //          }
         }
 
         System.out.println("read " + (index - start_cmd + 1) + " lines");

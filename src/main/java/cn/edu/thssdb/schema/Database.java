@@ -181,7 +181,7 @@ public class Database {
     try {
       lock.readLock().lock();
       if (tables.containsKey(table_name)) {
-        return new SingleTable(tables.get(table_name));
+        return new SingleQueryTable(tables.get(table_name));
       }
     } finally {
       lock.readLock().unlock();
@@ -197,7 +197,7 @@ public class Database {
         if (!tables.containsKey(table_name)) throw new KeyNotExistException();
         my_tables.add(tables.get(table_name));
       }
-      return new JointTable(my_tables, logic);
+      return new MultiQueryTable(my_tables, logic);
     } catch (Exception e) {
       throw new KeyNotExistException();
     } finally {

@@ -2,8 +2,6 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.type.ColumnType;
 
-import java.util.regex.Pattern;
-
 public class Column implements Comparable<Column> {
   private String name;
   private ColumnType type;

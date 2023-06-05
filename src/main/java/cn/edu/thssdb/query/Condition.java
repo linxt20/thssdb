@@ -1,5 +1,9 @@
 package cn.edu.thssdb.query;
 
+import cn.edu.thssdb.type.ComparerType;
+import cn.edu.thssdb.type.ConditionType;
+import cn.edu.thssdb.type.ResultType;
+
 /** 描述：处理一个逻辑比较式子 构造参数：左右comparer，比较类型 */
 public class Condition {
   Comparer mLeft;
@@ -13,7 +17,7 @@ public class Condition {
   }
 
   /** 描述：计算当前条件的运算结果 参数：无 返回：结果类型 */
-  public ResultType GetResult(JointRow the_row) {
+  public ResultType GetResult(QueryRow the_row) {
     // null和啥比较都是unknown
     if (mLeft.mType == ComparerType.NULL
         || mRight.mType == ComparerType.NULL

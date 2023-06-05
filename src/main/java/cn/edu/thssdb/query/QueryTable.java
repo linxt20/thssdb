@@ -9,7 +9,7 @@ import java.util.LinkedList;
 
 /** 描述：querytable父类 构造函数：无 */
 public abstract class QueryTable implements Iterator<Row> {
-  LinkedList<JointRow> mQueue; // 这个就是查询表的新结构
+  LinkedList<QueryRow> mQueue; // 这个就是查询表的新结构
   Logic mLogicSelect; // 选择逻辑
   boolean isFirst; // 是否是第一个元素
   public ArrayList<Column> mColumns; // 元数据信息
@@ -36,14 +36,14 @@ public abstract class QueryTable implements Iterator<Row> {
 
   /** 描述：返回下一个符合条件的元素，同时更新队列，保证除了自身之外非空 参数：无 返回：下一个元素row */
   @Override
-  public JointRow next() {
+  public QueryRow next() {
     if (mQueue.isEmpty()) {
       PrepareNext();
       if (isFirst) {
         isFirst = false;
       }
     }
-    JointRow result = null;
+    QueryRow result = null;
     if (!mQueue.isEmpty()) {
       result = mQueue.poll();
     } else {

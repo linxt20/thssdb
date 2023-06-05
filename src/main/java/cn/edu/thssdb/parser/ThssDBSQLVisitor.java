@@ -27,7 +27,7 @@ import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLBaseVisitor;
 import cn.edu.thssdb.sql.SQLParser;
-import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.type.*;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
@@ -40,6 +40,7 @@ import static cn.edu.thssdb.utils.Global.storage_dir;
 public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   private long sessionId;
+
   public ThssDBSQLVisitor(long sessionId) {
     super();
     this.sessionId = sessionId;
@@ -47,17 +48,17 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   @Override
   public LogicalPlan visitBeginTransactionStmt(SQLParser.BeginTransactionStmtContext ctx) {
-    try{
-      if (!Manager.getInstance().transaction_sessions.contains(sessionId)){
+    try {
+      if (!Manager.getInstance().transaction_sessions.contains(sessionId)) {
         Manager.getInstance().transaction_sessions.add(sessionId);
         ArrayList<String> s_lock_tables = new ArrayList<>();
         ArrayList<String> x_lock_tables = new ArrayList<>();
-        Manager.getInstance().s_lock_dict.put(sessionId,s_lock_tables);
-        Manager.getInstance().x_lock_dict.put(sessionId,x_lock_tables);
-      }else{
+        Manager.getInstance().s_lock_dict.put(sessionId, s_lock_tables);
+        Manager.getInstance().x_lock_dict.put(sessionId, x_lock_tables);
+      } else {
         System.out.println("session already in a transaction.");
       }
-    }catch (Exception e){
+    } catch (Exception e) {
       throw new RuntimeException(e.getMessage());
     }
     return new BeginTransactionPlan();
@@ -65,17 +66,17 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   @Override
   public LogicalPlan visitAutoBeginTransactionStmt(SQLParser.AutoBeginTransactionStmtContext ctx) {
-    try{
-      if (!Manager.getInstance().transaction_sessions.contains(sessionId)){
+    try {
+      if (!Manager.getInstance().transaction_sessions.contains(sessionId)) {
         Manager.getInstance().transaction_sessions.add(sessionId);
         ArrayList<String> s_lock_tables = new ArrayList<>();
         ArrayList<String> x_lock_tables = new ArrayList<>();
-        Manager.getInstance().s_lock_dict.put(sessionId,s_lock_tables);
-        Manager.getInstance().x_lock_dict.put(sessionId,x_lock_tables);
-      }else{
+        Manager.getInstance().s_lock_dict.put(sessionId, s_lock_tables);
+        Manager.getInstance().x_lock_dict.put(sessionId, x_lock_tables);
+      } else {
         System.out.println("session already in a transaction.");
       }
-    }catch (Exception e){
+    } catch (Exception e) {
       throw new RuntimeException(e.getMessage());
     }
     return new AutoBeginTransactionPlan();
@@ -83,8 +84,8 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   @Override
   public LogicalPlan visitCommitStmt(SQLParser.CommitStmtContext ctx) {
-    try{
-      if (Manager.getInstance().transaction_sessions.contains(sessionId)){
+    try {
+      if (Manager.getInstance().transaction_sessions.contains(sessionId)) {
         Database the_database = Manager.getInstance().getCurrentDB();
         String db_name = the_database.getName();
         Manager.getInstance().transaction_sessions.remove(sessionId);
@@ -95,28 +96,25 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           the_table.quit_tran();
         }
         table_list.clear();
-        Manager.getInstance().x_lock_dict.put(sessionId,table_list);
+        Manager.getInstance().x_lock_dict.put(sessionId, table_list);
 
         String log_name = storage_dir + db_name + ".log";
         File file = new File(log_name);
-        if(file.exists() && file.isFile() && file.length()>50000)
-        {
+        if (file.exists() && file.isFile() && file.length() > 50000) {
           System.out.println("Clear database log");
-          try
-          {
-            FileWriter writer=new FileWriter(log_name);
-            writer.write( "");
+          try {
+            FileWriter writer = new FileWriter(log_name);
+            writer.write("");
             writer.close();
-          } catch (IOException e)
-          {
+          } catch (IOException e) {
             e.printStackTrace();
           }
           Manager.getInstance().persist_database(db_name);
         }
-      }else{
+      } else {
         System.out.println("session not in a transaction.");
       }
-    }catch (Exception e){
+    } catch (Exception e) {
       throw new RuntimeException(e.getMessage());
     }
     return new CommitPlan();
@@ -124,8 +122,8 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   @Override
   public LogicalPlan visitAutoCommitStmt(SQLParser.AutoCommitStmtContext ctx) {
-    try{
-      if (Manager.getInstance().transaction_sessions.contains(sessionId)){
+    try {
+      if (Manager.getInstance().transaction_sessions.contains(sessionId)) {
         Database the_database = Manager.getInstance().getCurrentDB();
         Manager.getInstance().transaction_sessions.remove(sessionId);
         ArrayList<String> table_list = Manager.getInstance().x_lock_dict.get(sessionId);
@@ -135,15 +133,16 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           the_table.quit_tran();
         }
         table_list.clear();
-        Manager.getInstance().x_lock_dict.put(sessionId,table_list);
-      }else{
+        Manager.getInstance().x_lock_dict.put(sessionId, table_list);
+      } else {
         System.out.println("session not in a transaction.");
       }
-    }catch (Exception e){
+    } catch (Exception e) {
       throw new RuntimeException(e.getMessage());
     }
     return new AutoCommitPlan();
   }
+
   @Override
   public LogicalPlan visitCreateDbStmt(SQLParser.CreateDbStmtContext ctx) {
     return new CreateDatabasePlan(ctx.databaseName().getText());
@@ -177,8 +176,8 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     Column[] columns = new Column[n];
     int i = 0;
 
-    for (SQLParser.ColumnDefContext    // 读取各个列的定义
-            columnContext : ctx.columnDef()) {
+    for (SQLParser.ColumnDefContext // 读取各个列的定义
+        columnContext : ctx.columnDef()) {
       columns[i++] = readColumn(columnContext);
     }
 
@@ -241,8 +240,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
         default:
           return null;
       }
-    }
-    else return null;
+    } else return null;
   }
 
   /** 描述：获取单一数值的类型 */
@@ -412,12 +410,11 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
     return new InsertPlan(table_name, column_names, ctx.valueEntry());
   }
-  public void transaction_wait_read(ArrayList<String> table_names){
-    if(Manager.getInstance().transaction_sessions.contains(sessionId))
-    {
-      while(true)
-      {
-        if(!Manager.getInstance().session_queue.contains(sessionId))   //新加入一个session
+
+  public void transaction_wait_read(ArrayList<String> table_names) {
+    if (Manager.getInstance().transaction_sessions.contains(sessionId)) {
+      while (true) {
+        if (!Manager.getInstance().session_queue.contains(sessionId)) // 新加入一个session
         {
           ArrayList<Integer> lock_result = new ArrayList<>();
           for (String name : table_names) {
@@ -425,20 +422,18 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
             int get_lock = the_table.get_s_lock(sessionId);
             lock_result.add(get_lock);
           }
-          if(lock_result.contains(-1))
-          {
+          if (lock_result.contains(-1)) {
             for (String table_name : table_names) {
               Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
               the_table.free_s_lock(sessionId);
             }
             Manager.getInstance().session_queue.add(sessionId);
-          }else
-          {
+          } else {
             break;
           }
-        }else    //之前等待的session
+        } else // 之前等待的session
         {
-          if(Manager.getInstance().session_queue.get(0)==sessionId)  //只查看阻塞队列开头session
+          if (Manager.getInstance().session_queue.get(0) == sessionId) // 只查看阻塞队列开头session
           {
             ArrayList<Integer> lock_result = new ArrayList<>();
             for (String name : table_names) {
@@ -446,12 +441,10 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
               int get_lock = the_table.get_s_lock(sessionId);
               lock_result.add(get_lock);
             }
-            if(!lock_result.contains(-1))
-            {
+            if (!lock_result.contains(-1)) {
               Manager.getInstance().session_queue.remove(0);
               break;
-            }else
-            {
+            } else {
               for (String table_name : table_names) {
                 Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
                 the_table.free_s_lock(sessionId);
@@ -459,20 +452,20 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
             }
           }
         }
-        try
-        {
-          Thread.sleep(500);   // 休眠3秒
+        try {
+          Thread.sleep(500); // 休眠3秒
         } catch (Exception e) {
           System.out.println("Got an exception!");
         }
       }
     }
   }
-  public void transaction_wait_write(String table_name){
-    if(Manager.getInstance().transaction_sessions.contains(sessionId)) {
+
+  public void transaction_wait_write(String table_name) {
+    if (Manager.getInstance().transaction_sessions.contains(sessionId)) {
       Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
       while (true) {
-        if (!Manager.getInstance().session_queue.contains(sessionId))   //新加入一个session
+        if (!Manager.getInstance().session_queue.contains(sessionId)) // 新加入一个session
         {
           int get_lock = the_table.get_x_lock(sessionId);
           if (get_lock != -1) {
@@ -485,9 +478,9 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           } else {
             Manager.getInstance().session_queue.add(sessionId);
           }
-        } else    //之前等待的session
+        } else // 之前等待的session
         {
-          if (Manager.getInstance().session_queue.get(0) == sessionId)  //只查看阻塞队列开头session
+          if (Manager.getInstance().session_queue.get(0) == sessionId) // 只查看阻塞队列开头session
           {
             int get_lock = the_table.get_x_lock(sessionId);
             if (get_lock != -1) {
@@ -502,13 +495,14 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           }
         }
         try {
-          Thread.sleep(500);   // 休眠3秒
+          Thread.sleep(500); // 休眠3秒
         } catch (Exception e) {
           System.out.println("Got an exception!");
         }
       }
     }
   }
+
   @Override
   public LogicalPlan visitDeleteStmt(SQLParser.DeleteStmtContext ctx) {
     String table_name = ctx.tableName().getText().toLowerCase();

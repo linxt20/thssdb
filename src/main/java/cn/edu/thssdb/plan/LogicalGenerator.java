@@ -34,13 +34,12 @@ import java.util.Arrays;
 
 public class LogicalGenerator {
 
-  private static String[] wal_flag = {"insert","delete","update","begin","commit"};
+  private static String[] wal_flag = {"insert", "delete", "update", "begin", "commit"};
 
-  public static LogicalPlan generate(String sql,long sessionId) throws ParseCancellationException {
+  public static LogicalPlan generate(String sql, long sessionId) throws ParseCancellationException {
     String cmd = sql.split("\\s+")[0];
 
-    if(Arrays.asList(wal_flag).contains(cmd.toLowerCase()) && sessionId==0)
-    {
+    if (Arrays.asList(wal_flag).contains(cmd.toLowerCase()) && sessionId == 0) {
       Manager.getInstance().write_log(sql);
     }
 

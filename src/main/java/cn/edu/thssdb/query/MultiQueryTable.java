@@ -2,13 +2,14 @@ package cn.edu.thssdb.query;
 
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.type.ResultType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 
 /** 描述：多个table使用的联合查找表 参数：table */
-public class JointTable extends QueryTable implements Iterator<Row> {
+public class MultiQueryTable extends QueryTable implements Iterator<Row> {
 
   private ArrayList<Iterator<Row>> mIterators; // 這裡是每個table的iterator
   private ArrayList<Table> mTables;
@@ -17,7 +18,7 @@ public class JointTable extends QueryTable implements Iterator<Row> {
   /** 长度=每个table，分别代表每个table要出来join的列 */
   private LinkedList<Row> mRowsToBeJoined; // 用于存放每个table要join的row
 
-  public JointTable(ArrayList<Table> tables, Logic joinLogic) {
+  public MultiQueryTable(ArrayList<Table> tables, Logic joinLogic) {
     super();
     this.mTables = tables;
     this.mIterators = new ArrayList<>();
@@ -44,7 +45,7 @@ public class JointTable extends QueryTable implements Iterator<Row> {
   @Override
   public void PrepareNext() {
     while (true) {
-      JointRow the_row = JoinRows();
+      QueryRow the_row = JoinRows();
       if (the_row == null) {
         return;
       }
@@ -59,7 +60,7 @@ public class JointTable extends QueryTable implements Iterator<Row> {
   }
 
   /** 描述：将下一组row连接成一个完整的row，用于判断 参数：无 返回：无 */
-  private JointRow JoinRows() {
+  private QueryRow JoinRows() {
     if (mRowsToBeJoined.isEmpty()) {
       for (Iterator<Row> iter : mIterators) {
         if (!iter.hasNext()) {
@@ -67,7 +68,7 @@ public class JointTable extends QueryTable implements Iterator<Row> {
         }
         mRowsToBeJoined.push(iter.next());
       }
-      return new JointRow(mRowsToBeJoined, mTables);
+      return new QueryRow(mRowsToBeJoined, mTables);
     } else {
       int index;
       for (index = mIterators.size() - 1; index >= 0; index--) {
@@ -87,7 +88,7 @@ public class JointTable extends QueryTable implements Iterator<Row> {
         if (!mIterators.get(i).hasNext()) throw new RuntimeException("Iterator should have next");
         mRowsToBeJoined.push(mIterators.get(i).next());
       }
-      return new JointRow(mRowsToBeJoined, mTables);
+      return new QueryRow(mRowsToBeJoined, mTables);
     }
   }
 }

@@ -1,7 +1,6 @@
 package cn.edu.thssdb.client;
 
 import cn.edu.thssdb.rpc.thrift.*;
-import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.utils.Global;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;

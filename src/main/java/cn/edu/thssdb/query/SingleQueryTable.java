@@ -4,16 +4,19 @@ import cn.edu.thssdb.schema.Entry;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.type.ComparerType;
+import cn.edu.thssdb.type.ConditionType;
+import cn.edu.thssdb.type.ResultType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 
 /** 描述：单一table使用的查找表 参数：table */
-public class SingleTable extends QueryTable implements Iterator<Row> {
+public class SingleQueryTable extends QueryTable implements Iterator<Row> {
   private Table mTable;
   private Iterator<Row> mIterator;
 
-  public SingleTable(Table table) {
+  public SingleQueryTable(Table table) {
     super();
     this.mTable = table;
     this.mIterator = table.iterator();
@@ -88,7 +91,7 @@ public class SingleTable extends QueryTable implements Iterator<Row> {
   /** 描述：直接添加下一个 参数：无 返回：无 */
   private void PrepareNextDirect() {
     if (mIterator.hasNext()) {
-      JointRow the_row = new JointRow(mIterator.next(), mTable);
+      QueryRow the_row = new QueryRow(mIterator.next(), mTable);
       mQueue.add(the_row);
     }
   }
@@ -129,7 +132,7 @@ public class SingleTable extends QueryTable implements Iterator<Row> {
     ColumnType the_type = mTable.columns.get(primary_index).getType();
     Comparable real_value = SwitchType(const_value);
     Row row = mTable.getRow(new Entry(real_value));
-    JointRow the_row = new JointRow(row, mTable);
+    QueryRow the_row = new QueryRow(row, mTable);
     mQueue.add(the_row);
   }
 
@@ -137,7 +140,7 @@ public class SingleTable extends QueryTable implements Iterator<Row> {
   private void PrepareNextByLogic() {
     while (mIterator.hasNext()) {
       Row row = mIterator.next();
-      JointRow search_row = new JointRow(row, mTable);
+      QueryRow search_row = new QueryRow(row, mTable);
       if (mLogicSelect.GetResult(search_row) != ResultType.TRUE) {
         continue;
       }

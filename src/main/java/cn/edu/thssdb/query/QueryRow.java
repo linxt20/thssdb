@@ -3,6 +3,7 @@ package cn.edu.thssdb.query;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.type.ComparerType;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -11,10 +12,10 @@ import java.util.LinkedList;
  * 描述：查询用的row，用于处理查询时的值读取等 参数：如果是单一table，就只需要单一row和table即可
  * 如果是复合table，那么就是两个长度一样的linkedlist，一个是row，一个是table
  */
-public class JointRow extends Row {
+public class QueryRow extends Row {
   private ArrayList<Table> mTableInfoList;
 
-  public JointRow(LinkedList<Row> rows, ArrayList<Table> tables) {
+  public QueryRow(LinkedList<Row> rows, ArrayList<Table> tables) {
     super();
     mTableInfoList = new ArrayList<>();
     this.entries = new ArrayList<>();
@@ -26,7 +27,7 @@ public class JointRow extends Row {
     }
   }
 
-  public JointRow(Row the_row, Table the_table) {
+  public QueryRow(Row the_row, Table the_table) {
     super();
     mTableInfoList = new ArrayList<>();
     this.entries = new ArrayList<>();

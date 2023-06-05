@@ -6,6 +6,8 @@ import cn.edu.thssdb.exception.NullValueException;
 import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.storage.Cache;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.type.ComparerType;
+import cn.edu.thssdb.type.ResultType;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
@@ -293,7 +295,7 @@ public class Table implements Iterable<Row> {
       throw new RuntimeException("AttributeNotFoundException:" + column_name);
     }
     for (Row row : this) { // this是table的迭代器,row是table的行
-      JointRow the_row = new JointRow(row, this);
+      QueryRow the_row = new QueryRow(row, this);
       if (the_logic == null || the_logic.GetResult(the_row) == ResultType.TRUE) {
         Entry primary_entry = row.getEntries().get(primaryIndex);
         // 值处理，合法性判断
@@ -420,7 +422,7 @@ public class Table implements Iterable<Row> {
   public String delete(Logic the_logic) {
     int count = 0;
     for (Row row : this) {
-      JointRow the_row = new JointRow(row, this);
+      QueryRow the_row = new QueryRow(row, this);
       if (the_logic == null || the_logic.GetResult(the_row) == ResultType.TRUE) {
         Entry primary_entry = row.getEntries().get(primaryIndex);
         delete(primary_entry, false); // 这里加了一个false，后面修改需要注意一下
