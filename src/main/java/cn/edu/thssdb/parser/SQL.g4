@@ -26,6 +26,7 @@ sqlStmt :
     | revokeStmt
     | useDbStmt
     | showDbStmt
+    | showDbMetaStmt
     | showTableStmt
     | quitStmt
     | updateStmt
@@ -79,6 +80,9 @@ dropTableStmt :
 
 showDbStmt :
     K_SHOW K_DATABASES;
+
+showDbMetaStmt :
+    K_SHOW K_DATABASE databaseName;
 
 quitStmt :
     K_QUIT;

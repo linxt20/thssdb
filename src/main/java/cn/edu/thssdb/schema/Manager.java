@@ -239,4 +239,25 @@ public class Manager {
 
     private ManagerHolder() {}
   }
+
+  public String showDatabases() {
+    StringBuilder stringBuilder = new StringBuilder();
+    for (String databaseName : databases.keySet()) {
+      stringBuilder.append(databaseName).append("\n");
+    }
+    return stringBuilder.toString();
+  }
+
+  public String showDatabaseMeta(String databaseName) {
+    Database database = databases.get(databaseName);
+    if (database == null) {
+      throw new RuntimeException("Database " + databaseName + " not exist");
+    }
+    // 对database的每一个table，将其meta信息打印出来
+    StringBuilder stringBuilder = new StringBuilder();
+    for (String tableName : database.getTableNames()) {
+      stringBuilder.append(tableName).append("\n").append(database.show(tableName)).append("\n");
+    }
+    return stringBuilder.toString();
+  }
 }

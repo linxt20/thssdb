@@ -164,6 +164,16 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
   }
 
   @Override
+  public LogicalPlan visitShowDbStmt(SQLParser.ShowDbStmtContext ctx) {
+    return new ShowDatabasesPlan();
+  }
+
+  @Override
+  public LogicalPlan visitShowDbMetaStmt(SQLParser.ShowDbMetaStmtContext ctx) {
+    return new ShowDatabaseMetaPlan(ctx.databaseName().getText());
+  }
+
+  @Override
   public LogicalPlan visitDropTableStmt(SQLParser.DropTableStmtContext ctx) {
     return new DropTablePlan(ctx.tableName().getText());
   }

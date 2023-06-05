@@ -19,6 +19,8 @@ public abstract class LogicalPlan {
     USE_DB,
     CREATE_TABLE,
     SHOW_TABLE,
+    SHOW_DATABASES,
+    SHOW_DATABASE_META,
     DROP_TABLE,
     SELECT,
     INSERT,
