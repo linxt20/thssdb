@@ -38,6 +38,7 @@ public class ThssDB {
 
   private void start() {
     Manager.getInstance();
+    Manager.getInstance().recover();
     handler = new IServiceHandler();
     processor = new IService.Processor(handler);
     Runnable setup = () -> setUp(processor);

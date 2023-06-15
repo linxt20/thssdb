@@ -2,10 +2,10 @@
 
 target/
 
-*.meta
+*.log
 
 *.data
 
-ThssDB/data/
+ThssDB/data/*
 
 ThssDB/out/

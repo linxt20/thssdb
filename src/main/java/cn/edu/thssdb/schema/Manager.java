@@ -32,7 +32,6 @@ public class Manager {
     session_queue = new ArrayList<>();
     s_lock_dict = new HashMap<>();
     x_lock_dict = new HashMap<>();
-    recover();
   }
 
   // getdatabase函数是获取指定名字的database
