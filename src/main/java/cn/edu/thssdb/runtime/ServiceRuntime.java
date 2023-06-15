@@ -31,7 +31,6 @@ public class ServiceRuntime {
       LogicalGenerator.generate("autobegin transaction", sessionId);
       plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
       LogicalGenerator.generate("autocommit", sessionId);
-
     } else {
       plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
     }
