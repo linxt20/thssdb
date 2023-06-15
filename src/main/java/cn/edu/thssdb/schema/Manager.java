@@ -34,6 +34,7 @@ public class Manager {
     x_lock_dict = new HashMap<>();
     recover();
   }
+
   // getdatabase函数是获取指定名字的database
   public Database getDatabase(String dbName) {
     try {
@@ -45,6 +46,7 @@ public class Manager {
       lock.readLock().unlock();
     }
   }
+
   // getcurrentdb函数是获取当前正在使用的database
   public Database getCurrentDB() {
     try {
@@ -54,6 +56,7 @@ public class Manager {
       lock.readLock().unlock();
     }
   }
+
   // setcurrentdb函数是设置当前正在使用的database
   public void setCurrentDB(String dbName) {
     // 设置当前正在使用的database
@@ -67,6 +70,7 @@ public class Manager {
       lock.writeLock().unlock();
     }
   }
+
   // containdatabase函数是判断是否存在指定名字的database
   public boolean containDatabase(String dbName) {
     try {
@@ -76,11 +80,13 @@ public class Manager {
       lock.readLock().unlock();
     }
   }
+
   // createdatabaseifnotexists函数是创建指定名字的database
   public void createDatabaseIfNotExists(String dbName) {
     try {
       lock.writeLock().lock();
-      if (!databases.containsKey(dbName)) databases.put(dbName, new Database(dbName));
+      if (!databases.containsKey(dbName))
+        databases.put(dbName, new Database(dbName));
       if (currentDB == null) {
         try {
           lock.readLock().lock();
@@ -95,6 +101,7 @@ public class Manager {
       lock.writeLock().unlock();
     }
   }
+
   // deletedatabase函数是删除指定名字的database
   public void deleteDatabase(String dbName) {
     try {
@@ -166,14 +173,14 @@ public class Manager {
 
         if (transaction_list.size() != commit_list.size()) {
           start_cmd = transaction_list.get(transaction_list.size() - 1);
-          //          // redo
-          //          for (int i = start_cmd; i < index; i++) {
-          //            ServiceRuntime.executeStatement(lines.get(i),0);
-          //          }
-          //          // undo
-          //          for (int i = index-1; i >= start_cmd; i--) {
-          //            ServiceRuntime.executeStatement(lines.get(i),0);
-          //          }
+          // // redo
+          // for (int i = start_cmd; i < index; i++) {
+          // ServiceRuntime.executeStatement(lines.get(i),0);
+          // }
+          // // undo
+          // for (int i = index-1; i >= start_cmd; i--) {
+          // ServiceRuntime.executeStatement(lines.get(i),0);
+          // }
         }
 
         System.out.println("read " + (index - start_cmd + 1) + " lines");
