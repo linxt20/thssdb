@@ -28,6 +28,7 @@ import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLBaseVisitor;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.type.*;
+import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.Pair;
 
 import java.io.File;
@@ -89,14 +90,24 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
         Database the_database = Manager.getInstance().getCurrentDB();
         String db_name = the_database.getName();
         Manager.getInstance().transaction_sessions.remove(sessionId);
-        ArrayList<String> table_list = Manager.getInstance().x_lock_dict.get(sessionId);
-        for (String table_name : table_list) {
+        ArrayList<String> table_x_list = Manager.getInstance().x_lock_dict.get(sessionId);
+        for (String table_name : table_x_list) {
           Table the_table = the_database.get(table_name);
           the_table.free_x_lock(sessionId);
           the_table.quit_tran();
         }
-        table_list.clear();
-        Manager.getInstance().x_lock_dict.put(sessionId, table_list);
+        table_x_list.clear();
+        Manager.getInstance().x_lock_dict.put(sessionId, table_x_list);
+        if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.SERIALIZABLE) {
+          ArrayList<String> table_s_list = Manager.getInstance().s_lock_dict.get(sessionId);
+          for (String table_name : table_s_list) {
+            Table the_table = the_database.get(table_name);
+            the_table.free_s_lock(sessionId);
+            the_table.quit_tran();
+          }
+          table_s_list.clear();
+          Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
+        }
 
         String log_name = storage_dir + db_name + ".log";
         File file = new File(log_name);
@@ -134,6 +145,18 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
         }
         table_list.clear();
         Manager.getInstance().x_lock_dict.put(sessionId, table_list);
+
+        if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.SERIALIZABLE) {
+          ArrayList<String> table_s_list = Manager.getInstance().s_lock_dict.get(sessionId);
+          for (String table_name : table_s_list) {
+            Table the_table = the_database.get(table_name);
+            the_table.free_s_lock(sessionId);
+            the_table.quit_tran();
+          }
+          table_s_list.clear();
+          Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
+        }
+
       } else {
         System.out.println("session not in a transaction.");
       }
@@ -415,9 +438,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     }
     // 应受隔离级别限制，暂时不实现
     System.out.println("[Debug] valueEntry" + ctx.valueEntry().toString());
-
     transaction_wait_write(table_name);
-
     return new InsertPlan(table_name, column_names, ctx.valueEntry());
   }
 
@@ -439,6 +460,11 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
             }
             Manager.getInstance().session_queue.add(sessionId);
           } else {
+            ArrayList<String> tmp = Manager.getInstance().s_lock_dict.get(sessionId);
+            for (String table_name : table_names) {
+              tmp.add(table_name);
+            }
+            Manager.getInstance().s_lock_dict.put(sessionId, tmp);
             break;
           }
         } else // 之前等待的session
@@ -452,6 +478,11 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
               lock_result.add(get_lock);
             }
             if (!lock_result.contains(-1)) {
+              ArrayList<String> tmp = Manager.getInstance().s_lock_dict.get(sessionId);
+              for (String table_name : table_names) {
+                tmp.add(table_name);
+              }
+              Manager.getInstance().s_lock_dict.put(sessionId, tmp);
               Manager.getInstance().session_queue.remove(0);
               break;
             } else {

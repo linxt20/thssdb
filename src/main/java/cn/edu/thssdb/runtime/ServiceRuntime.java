@@ -10,9 +10,11 @@ import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.sql.SQLParser;
 import cn.edu.thssdb.utils.StatusUtil;
+import cn.edu.thssdb.utils.Global;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -143,6 +145,16 @@ public class ServiceRuntime {
             String tmp = the_result.toString();
             tmp = tmp.substring(1, tmp.length() - 1);
             res += tmp + "\n";
+          }
+          if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
+            ArrayList<String> table_s_list = Manager.getInstance().s_lock_dict.get(sessionId);
+            for (String table_name : table_s_list) {
+              Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
+              the_table.free_s_lock(sessionId);
+              the_table.quit_tran();
+            }
+            table_s_list.clear();
+            Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
           }
           return new ExecuteStatementResp(StatusUtil.success(res), false);
         } catch (Exception e) {
