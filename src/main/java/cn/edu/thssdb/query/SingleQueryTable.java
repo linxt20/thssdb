@@ -15,12 +15,14 @@ import java.util.Iterator;
 public class SingleQueryTable extends QueryTable implements Iterator<Row> {
   private Table mTable;
   private Iterator<Row> mIterator;
+  Logic mLogicSelect; // 选择逻辑
 
-  public SingleQueryTable(Table table) {
+  public SingleQueryTable(Table table, Logic logicSelect){
     super();
     this.mTable = table;
     this.mIterator = table.iterator();
     this.mColumns = table.columns;
+    this.mLogicSelect = logicSelect;
   }
 
   /** 描述：返回元数据信息 参数：无 返回：元数据信息 */

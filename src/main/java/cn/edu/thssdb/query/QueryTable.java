@@ -10,7 +10,6 @@ import java.util.LinkedList;
 /** 描述：querytable父类 构造函数：无 */
 public abstract class QueryTable implements Iterator<Row> {
   LinkedList<QueryRow> mQueue; // 这个就是查询表的新结构
-  Logic mLogicSelect; // 选择逻辑
   boolean isFirst; // 是否是第一个元素
   public ArrayList<Column> mColumns; // 元数据信息
 
@@ -23,10 +22,6 @@ public abstract class QueryTable implements Iterator<Row> {
     this.isFirst = true;
   }
 
-  /** 描述：设置选择逻辑 参数：选择逻辑 返回：无 */
-  public void SetLogicSelect(Logic selectLogic) {
-    this.mLogicSelect = selectLogic;
-  }
 
   /** 描述：判断是否还有元素 参数：无 返回：无 */
   @Override

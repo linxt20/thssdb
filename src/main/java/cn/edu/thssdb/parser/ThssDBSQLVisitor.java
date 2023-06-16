@@ -315,8 +315,6 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
   /** 描述：处理复合逻辑 */
   public Logic visitMultiple_condition(SQLParser.MultipleConditionContext ctx) {
     // 单一条件
-    Object a = ctx.multipleCondition(0);
-    Object b = ctx.AND();
     if (ctx.condition() != null) return new Logic(visit_Condition(ctx.condition()));
 
     // 复合逻辑
@@ -357,14 +355,19 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       throw new RuntimeException("Error: no selected table");
     }
     ArrayList<String> table_names = new ArrayList<>();
-    Logic logicForJoin = null;
+    Logic logic = null, whereLogic = null;
+    int joinType = 0; // 0: no join，1: left join，2: right join 3: full join 4: 正常inner join
     try {
       if (ctx.tableQuery(0).K_JOIN().size() == 0) {
         table_names.add(ctx.tableQuery(0).tableName(0).getText().toLowerCase());
       }
       // 如果是复合表，需要读取join逻辑
       else {
-        logicForJoin = visitMultiple_condition(ctx.tableQuery(0).multipleCondition());
+        if (ctx.tableQuery(0).K_LEFT().size() > 0) joinType = 1;
+        else if (ctx.tableQuery(0).K_RIGHT().size() > 0) joinType = 2;
+        else if(ctx.tableQuery(0).K_FULL().size() > 0) joinType = 3;
+        else joinType = 4;
+        logic = visitMultiple_condition(ctx.tableQuery(0).multipleCondition());
         for (SQLParser.TableNameContext subCtx : ctx.tableQuery(0).tableName()) {
           table_names.add(subCtx.getText().toLowerCase());
         }
@@ -373,11 +376,15 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       throw new RuntimeException("Error: no selected table");
     }
     // 建立逻辑，获得结果
-    Logic logic = null;
-    if (ctx.K_WHERE() != null) logic = visitMultiple_condition(ctx.multipleCondition());
-
-    transaction_wait_read(table_names);
-    return new SelectPlan(table_names, columnsSelected, logicForJoin, logic, distinct);
+    if (ctx.K_WHERE() != null) {
+      whereLogic = visitMultiple_condition(ctx.multipleCondition());
+      //transaction_wait_read(table_names);
+      return new SelectPlan(table_names, columnsSelected, logic, whereLogic, distinct, joinType);
+    }
+    else{
+        //transaction_wait_read(table_names);
+        return new SelectPlan(table_names, columnsSelected, logic, distinct, joinType);
+    }
   }
 
   // 描述：读取列定义中的信息---名字，类型，是否主键，是否非空，最大长度
@@ -440,7 +447,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     }
     // 应受隔离级别限制，暂时不实现
     System.out.println("[Debug] valueEntry" + ctx.valueEntry().toString());
-    transaction_wait_write(table_name);
+    //transaction_wait_write(table_name);
     return new InsertPlan(table_name, column_names, ctx.valueEntry());
   }
 
@@ -496,7 +503,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           }
         }
         try {
-          Thread.sleep(500); // 休眠3秒
+          Thread.sleep(10); // 休眠3秒
         } catch (Exception e) {
           System.out.println("Got an exception!");
         }
@@ -538,7 +545,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           }
         }
         try {
-          Thread.sleep(500); // 休眠3秒
+          Thread.sleep(10); // 休眠3秒
         } catch (Exception e) {
           System.out.println("Got an exception!");
         }

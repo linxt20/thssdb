@@ -156,7 +156,8 @@ resultColumn
 
 tableQuery :
     tableName
-    | tableName ( K_JOIN tableName )+ K_ON multipleCondition ;
+    | tableName (( K_INNER )? K_JOIN tableName )+ K_ON multipleCondition
+    | tableName (( K_LEFT | K_RIGHT | K_FULL ) ( K_OUTER )? K_JOIN tableName)+ K_ON multipleCondition;
 
 authLevel :
     K_SELECT | K_INSERT | K_UPDATE | K_DELETE | K_DROP ;
@@ -227,6 +228,11 @@ K_IDENTIFIED : I D E N T I F I E D;
 K_INSERT : I N S E R T;
 K_INTO : I N T O;
 K_JOIN : J O I N;
+K_LEFT : L E F T;
+K_RIGHT : R I G H T;
+K_FULL : F U L L;
+K_OUTER : O U T E R;
+K_INNER : I N N E R;
 K_KEY : K E Y;
 K_NOT : N O T;
 K_NULL : N U L L;

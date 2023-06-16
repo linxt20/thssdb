@@ -10,11 +10,11 @@ import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.schema.Row;
+import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLParser;
-import cn.edu.thssdb.utils.StatusUtil;
 import cn.edu.thssdb.utils.Global;
+import cn.edu.thssdb.utils.StatusUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +67,7 @@ public class ServiceRuntime {
         } else {
           return new ExecuteStatementResp(StatusUtil.fail("Database does not exist."), false);
         }
+        //return new ExecuteStatementResp(StatusUtil.fail("Drop database is not supported."), false);
       case USE_DB:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         UseDatabasePlan useDatabasePlan = (UseDatabasePlan) plan;
@@ -124,26 +125,27 @@ public class ServiceRuntime {
           String[] columnsName = selectPlan.getColumns();
           ArrayList<String> tableNames = selectPlan.getTableNames();
           QueryTable queryTable = null; // = selectPlan.getQueryTable();
-          Logic logicForJoin = selectPlan.getLogicForJoin();
+          int joinType = selectPlan.getJoinType();
           Logic logic = selectPlan.getLogic();
           Boolean distinct = selectPlan.getDistinct();
           // 如果没有join，即为单一表查询
-          if (logicForJoin == null) {
+          if (joinType == 0) {
             if (tableNames.size() != 1) {
               return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
             }
             queryTable =
-                Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
+                Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0), selectPlan.getWhereLogic());
           }
-          // 如果是复合表，需要读取join逻辑
+          // 如果是复合表，需要读取join逻辑和类型  0: no join，1: left join，2: right join 3: full join 4: 正常inner join
           else {
             queryTable =
-                Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
+                Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logic, joinType, selectPlan.getWhereLogic());
           }
 
-          ExecuteStatementResp resp =  new ExecuteStatementResp(StatusUtil.success("select result:"), true);
+          ExecuteStatementResp resp =
+              new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
-              Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
+              Manager.getInstance().getCurrentDB().select(columnsName, queryTable, distinct);
           for (String column_name : result.mColumnName) {
             resp.addToColumnsList(column_name);
           }
@@ -207,7 +209,7 @@ public class ServiceRuntime {
           return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
         } catch (Exception e) {
           System.out.println(e.getMessage());
-            return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case DELETE:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
