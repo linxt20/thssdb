@@ -53,6 +53,44 @@ public class Table implements Iterable<Row> {
     this.tplock = 0;
     recover();
   }
+
+  public void addColoumn(String columnName, ColumnType columnType, int MaxLen) {
+    Column column = new Column(columnName, columnType,0,false, MaxLen);
+    //判断是否有重复的列名
+    for (Column c : columns) {
+      if (c.getName().equals(columnName)) {
+        throw new RuntimeException("DuplicateColumnNameException");
+      }
+    }
+    this.columns.add(column);
+  }
+
+  public void dropColumn(String columnName) {
+    //判断要删除的列是否已存在
+    boolean flag = false;
+    for (Column c : columns) {
+      if (c.getName().equals(columnName)) {
+        flag = true;
+        break;
+      }
+    }
+    if (!flag) {
+      throw new RuntimeException("ColumnNotExistException");
+    }
+    //判断要删除的列是否为主键
+    if (columns.get(primaryIndex).getName().equals(columnName)) {
+      throw new RuntimeException("DropPrimaryException");
+    }
+    //删除列
+    for (int i = 0; i < columns.size(); i++) {
+      if (columns.get(i).getName().equals(columnName)) {
+        columns.remove(i);
+        break;
+      }
+    }
+
+  }
+
   // get_s_lock函数根据session获取s锁
   public int get_s_lock(long session) {
     int value = 0; // 返回-1代表加锁失败  返回0代表成功但未加锁  返回1代表成功加锁
@@ -533,4 +571,6 @@ public class Table implements Iterable<Row> {
   public Iterator<Row> iterator() {
     return new TableIterator(this);
   }
+
+
 }

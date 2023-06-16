@@ -11,7 +11,8 @@ sqlStmtList :
     ';'* sqlStmt ( ';'+ sqlStmt )* ';'* ;
 
 sqlStmt :
-    createTableStmt
+    alter_table_stmt
+    | createTableStmt
     | createDbStmt
     | createUserStmt
     | dropDbStmt
@@ -34,6 +35,10 @@ sqlStmt :
     | autoBeginTransactionStmt
     | autoCommitStmt
     | commitStmt ;
+
+alter_table_stmt:
+    K_ALTER K_TABLE tableName
+        (K_ADD columnName typeName | K_DROP K_COLUMN columnName | K_ALTER K_COLUMN columnName typeName) ;
 
 beginTransactionStmt :
     K_BEGIN K_TRANSACTION;

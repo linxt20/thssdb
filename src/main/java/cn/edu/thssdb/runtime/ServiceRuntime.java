@@ -10,11 +10,12 @@ import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.schema.Row;
+import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLParser;
-import cn.edu.thssdb.utils.StatusUtil;
+import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Global;
+import cn.edu.thssdb.utils.StatusUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -141,7 +142,8 @@ public class ServiceRuntime {
                 Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
           }
 
-          ExecuteStatementResp resp =  new ExecuteStatementResp(StatusUtil.success("select result:"), true);
+          ExecuteStatementResp resp =
+              new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
               Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
           for (String column_name : result.mColumnName) {
@@ -207,7 +209,7 @@ public class ServiceRuntime {
           return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
         } catch (Exception e) {
           System.out.println(e.getMessage());
-            return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case DELETE:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
@@ -234,6 +236,36 @@ public class ServiceRuntime {
       case AUTO_COMMIT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         return new ExecuteStatementResp(StatusUtil.success("Auto commit successfully."), false);
+      case ALTER_TABLE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        AlterTablePlan alterTablePlan = (AlterTablePlan) plan;
+        String alter_table_name = alterTablePlan.getTableName();
+        String alter_column_name = alterTablePlan.getColumnName();
+        String alter_operation_type = alterTablePlan.getOpType();
+        ColumnType alter_column_type = null;
+        int max_length = -1;
+        //准备相关参数
+        if(alter_operation_type.equals("add")){
+          alter_column_type = alterTablePlan.getColumnType();
+          max_length = alterTablePlan.getMaxLength();
+        }
+        else if(alter_operation_type.equals("drop")){
+            //do nothing
+        }
+        else{
+          return new ExecuteStatementResp(StatusUtil.fail("wrong alter operation type"), false);
+        }
+
+        try {
+          Manager.getInstance()
+              .getCurrentDB()
+              .alter(alter_table_name, alter_operation_type,alter_column_name, alter_column_type, max_length);
+        } catch (Exception e) {
+          System.out.println(e.getMessage());
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+        }
+        return new ExecuteStatementResp(StatusUtil.success("Alter table successfully."), false);
+
 
       default:
     }

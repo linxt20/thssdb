@@ -84,8 +84,7 @@ public class Manager {
   public void createDatabaseIfNotExists(String dbName) {
     try {
       lock.writeLock().lock();
-      if (!databases.containsKey(dbName))
-        databases.put(dbName, new Database(dbName));
+      if (!databases.containsKey(dbName)) databases.put(dbName, new Database(dbName));
       if (currentDB == null) {
         try {
           lock.readLock().lock();

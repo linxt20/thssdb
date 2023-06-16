@@ -247,11 +247,11 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     String column_name = ctx.columnName().getText().toLowerCase();
     Comparer value = visit_expression(ctx.expression());
     if (ctx.K_WHERE() == null) {
-      //transaction_wait_write(table_name);
+      // transaction_wait_write(table_name);
       return new UpdatePlan(table_name, column_name, value, null);
     }
     Logic logic = visitMultiple_condition(ctx.multipleCondition());
-    //transaction_wait_write(table_name);
+    // transaction_wait_write(table_name);
     return new UpdatePlan(table_name, column_name, value, logic);
   }
 
@@ -551,15 +551,33 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     String table_name = ctx.tableName().getText().toLowerCase();
     if (ctx.K_WHERE() == null) {
       try {
-        //transaction_wait_write(table_name);
+        // transaction_wait_write(table_name);
         return new DeletePlan(table_name, null);
       } catch (Exception e) {
         System.out.println(e.getMessage());
       }
     }
     Logic logic = visitMultiple_condition(ctx.multipleCondition());
-    //transaction_wait_write(table_name);
+    // transaction_wait_write(table_name);
     return new DeletePlan(table_name, logic);
   }
+
+   @Override
+   public LogicalPlan visitAlterTableStmt(SQLParser.AlterTableStmtContext ctx) {
+    String table_name = ctx.tableName().getText().toLowerCase();
+        if (ctx.K_ADD() != null) {
+        String column_name = ctx.columnName().getText().toLowerCase();
+        Pair<ColumnType, Integer> type = visitType_Name(ctx.typeName());
+        ColumnType columnType = type.getKey();
+        int maxLength = type.getValue(); // 这里的maxLength对于int，long，float，double都是-1，只有string是最大长度
+        return new AlterTablePlan(table_name, column_name, "add",columnType,maxLength);
+        } else if (ctx.K_DROP() != null) {
+        String column_name = ctx.columnName().getText().toLowerCase();
+        return new AlterTablePlan(table_name, column_name, "drop",null,-1);
+        }
+        return null;
+   }
+
   // TODO: parser to more logical plan
+
 }

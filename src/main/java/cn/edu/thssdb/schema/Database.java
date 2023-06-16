@@ -89,7 +89,8 @@ public class Database {
     }
     try {
       lock.writeLock().lock();
-      if (tables.containsKey(name)) throw new RuntimeException("Database create table error: table already exists");
+      if (tables.containsKey(name))
+        throw new RuntimeException("Database create table error: table already exists");
       Table new_table = new Table(this.name, name, columns);
       tables.put(name, new_table);
       persist_table(new_table); // 这里修改为只写入新建的table的元数据，不用重复写入所有table的元数据
@@ -329,4 +330,26 @@ public class Database {
       lock.readLock().unlock();
     }
   }
+
+  public void alter(String tableName, String opType,String columnName, ColumnType columnType, int maxLen) {
+    try {
+      lock.writeLock().lock();
+      Table table = get(tableName);
+        if (opType.equals("add")) {
+            table.addColoumn(columnName, columnType, maxLen);
+            return;
+        }
+        else if (opType.equals("drop")) {
+            table.dropColumn(columnName);
+            return;
+        }
+    }
+    catch (RuntimeException e){
+        throw e;
+    }
+      finally{
+      lock.writeLock().unlock();
+    }
+  }
+
 }
