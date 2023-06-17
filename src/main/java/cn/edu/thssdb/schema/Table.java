@@ -9,6 +9,7 @@ import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.type.ComparerType;
 import cn.edu.thssdb.type.ResultType;
 import cn.edu.thssdb.utils.Pair;
+import cn.edu.thssdb.utils.Global;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -115,9 +116,13 @@ public class Table implements Iterable<Row> {
       if (s_lock_list.contains(session)) { // 自身已经有s锁了 用s锁去读，未加锁
         value = 0;
       } else {
-        s_lock_list.add(session); // 其他session加了s锁 把自己加上
-        tplock = 1;
-        value = 1;
+        if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
+          s_lock_list.add(session); // 其他session加了s锁 把自己加上
+          tplock = 1;
+          value = 1;
+        } else if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.SERIALIZABLE) {
+          value = -1; // 别的session占用s锁，未加锁
+        }
       }
     } else if (tplock == 0) {
       s_lock_list.add(session); // 未加锁 把自己加上
@@ -136,7 +141,18 @@ public class Table implements Iterable<Row> {
         value = -1; // 获取x锁失败
       }
     } else if (tplock == 1) {
-      value = -1; // 正在被其他s锁占用
+      if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.SERIALIZABLE) {
+        if (s_lock_list.contains(session)) { // 自身已经取得s锁
+          s_lock_list.remove(session);
+          x_lock_list.add(session);
+          tplock = 2;
+          value = 1;
+        } else {
+          value = -1;
+        }
+      } else if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
+        value = -1; // 正在被其他s锁占用
+      }
     } else if (tplock == 0) {
       x_lock_list.add(session);
       tplock = 2;

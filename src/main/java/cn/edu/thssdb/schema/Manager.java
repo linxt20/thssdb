@@ -84,7 +84,10 @@ public class Manager {
   public void createDatabaseIfNotExists(String dbName) {
     try {
       lock.writeLock().lock();
-      if (!databases.containsKey(dbName)) databases.put(dbName, new Database(dbName));
+      if (!databases.containsKey(dbName)) {
+        databases.put(dbName, new Database(dbName));
+        persist();
+      }
       if (currentDB == null) {
         try {
           lock.readLock().lock();
@@ -109,6 +112,7 @@ public class Manager {
       // 调用 database.dropall() 删除数据库内所有的元数据文件和存储数据的页文件
       databases.get(dbName).dropall();
       databases.remove(dbName);
+      persist();
     } finally {
       lock.writeLock().unlock();
     }
@@ -170,18 +174,26 @@ public class Manager {
         int start_cmd = 0;
 
         if (transaction_list.size() != commit_list.size()) {
-          start_cmd = transaction_list.get(transaction_list.size() - 1);
-          // // redo
-          // for (int i = start_cmd; i < index; i++) {
-          // ServiceRuntime.executeStatement(lines.get(i),0);
-          // }
-          // // undo
-          // for (int i = index-1; i >= start_cmd; i--) {
-          // ServiceRuntime.executeStatement(lines.get(i),0);
-          // }
+          start_cmd = transaction_list.get(transaction_list.size()-1);
+        }else {
+          start_cmd = transaction_list.get(commit_list.size() - 1) + 1;
+        }
+        for (int i = 0; i < start_cmd; i++) {
+          try {
+            ServiceRuntime.executeStatement(lines.get(i),0);
+          }
+          catch (Exception e){
+            continue;
+          }
+        }
+        for (Database db : databases.values()) {
+          db.quit();
+        }
+        persist();
+        if (temp_file.exists() && temp_file.isFile()) {
+          temp_file.delete();
         }
 
-        System.out.println("read " + (index - start_cmd + 1) + " lines");
       } catch (IOException e) {
         e.printStackTrace();
       }

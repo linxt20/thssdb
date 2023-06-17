@@ -131,8 +131,7 @@ public class ServiceRuntime {
           // 如果没有join，即为单一表查询
           if (joinType == 0) {
             if (tableNames.size() != 1) {
-              if(autoCommit)
-                LogicalGenerator.generate("autocommit", sessionId);
+              if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
               return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
             }
             queryTable =
@@ -178,14 +177,12 @@ public class ServiceRuntime {
             ArrayList<String> the_result = row.toStringList();
             resp.addToRowList(the_result);
           }
-          if(autoCommit)
-            LogicalGenerator.generate("autocommit", sessionId);
+          if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
           return resp;
         } catch (Exception e) {
           // QueryResult error_result = new QueryResult(e.toString());
           // return error_result;
-          if(autoCommit)
-            LogicalGenerator.generate("autocommit", sessionId);
+          if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case INSERT:
@@ -203,14 +200,12 @@ public class ServiceRuntime {
           try {
             Manager.getInstance().getCurrentDB().insert(table_name, column_names, values);
           } catch (RuntimeException e) {
-            if(autoCommit)
-              LogicalGenerator.generate("autocommit", sessionId);
+            if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
             return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
           }
         }
         System.out.println("insert over");
-        if(autoCommit)
-          LogicalGenerator.generate("autocommit", sessionId);
+        if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
         return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
       case UPDATE:
         try {
@@ -227,13 +222,11 @@ public class ServiceRuntime {
                   column_name_for_update,
                   value_for_update,
                   logic_for_update);
-          if(autoCommit)
-            LogicalGenerator.generate("autocommit", sessionId);
+          if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
         } catch (Exception e) {
           System.out.println(e.getMessage());
-          if(autoCommit)
-            LogicalGenerator.generate("autocommit", sessionId);
+          if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case DELETE:
@@ -246,8 +239,7 @@ public class ServiceRuntime {
         } catch (Exception e) {
           System.out.println(e.getMessage());
         }
-        if(autoCommit)
-          LogicalGenerator.generate("autocommit", sessionId);
+        if (autoCommit) LogicalGenerator.generate("autocommit", sessionId);
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
       case BEGIN_TRANSACTION:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
