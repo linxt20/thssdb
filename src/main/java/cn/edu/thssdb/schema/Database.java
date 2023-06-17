@@ -17,7 +17,7 @@ import static cn.edu.thssdb.utils.Global.storage_dir;
 public class Database {
 
   private String name; // 数据库名
-  private HashMap<String, Table> tables; // 表名到表的映射
+  public HashMap<String, Table> tables; // 表名到表的映射
   ReentrantReadWriteLock lock; // 读写锁
 
   public Database(String name) {
@@ -225,14 +225,14 @@ public class Database {
       lock.writeLock().lock();
       Table table = get(tableName);
       if (column_names == null) {
-        for (int i = 0; i < values.length; i++) {
-          System.out.println("Database insert, " + values[i]);
-        }
+        // for (int i = 0; i < values.length; i++) {
+        //   System.out.println("Database insert, " + values[i]);
+        // }
         table.insert(values, false);
       } else {
-        for (int i = 0; i < values.length; i++) {
-          System.out.println("Database insert, " + values[i]);
-        }
+        // for (int i = 0; i < values.length; i++) {
+        //   System.out.println("Database insert, " + values[i]);
+        // }
         table.insert(column_names, values, false);
       }
     } catch (RuntimeException e) {

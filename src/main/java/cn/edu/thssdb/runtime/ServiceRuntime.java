@@ -31,11 +31,7 @@ public class ServiceRuntime {
             || cmd.toLowerCase().equals("select"))
         && !Manager.getInstance().transaction_sessions.contains(sessionId)) {
       LogicalGenerator.generate("autobegin transaction", sessionId);
-      try {
-        plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
-      } catch (Exception e) {
-        return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
-      }
+      plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
       LogicalGenerator.generate("autocommit", sessionId);
     } else {
       plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
@@ -141,6 +137,19 @@ public class ServiceRuntime {
                 Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
           }
 
+          if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
+            ArrayList<String> table_s_list = Manager.getInstance().s_lock_dict.get(sessionId);
+            // 打印出此时的事务号，以及此时的s锁列表
+            System.out.println("session id: " + sessionId);
+            System.out.println("s lock list: " + table_s_list);
+            for (String table_name : table_s_list) {
+              Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
+              the_table.free_s_lock(sessionId);
+              the_table.quit_tran();
+            }
+            table_s_list.clear();
+            Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
+          }
           ExecuteStatementResp resp =  new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
               Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
@@ -150,16 +159,6 @@ public class ServiceRuntime {
           for (Row row : result.mResultList) {
             ArrayList<String> the_result = row.toStringList();
             resp.addToRowList(the_result);
-          }
-          if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
-            ArrayList<String> table_s_list = Manager.getInstance().s_lock_dict.get(sessionId);
-            for (String table_name : table_s_list) {
-              Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
-              the_table.free_s_lock(sessionId);
-              the_table.quit_tran();
-            }
-            table_s_list.clear();
-            Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
           }
           return resp;
         } catch (Exception e) {
