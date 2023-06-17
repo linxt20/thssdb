@@ -190,7 +190,8 @@ public class Database {
     throw new KeyNotExistException();
   }
   /** 描述：建立复合querytable 参数：table names，join逻辑 返回：querytable */
-  public QueryTable BuildJointQueryTable(ArrayList<String> table_names, Logic logic, int joinType, Logic selectLogic) {
+  public QueryTable BuildJointQueryTable(
+      ArrayList<String> table_names, Logic logic, int joinType, Logic selectLogic) {
     // 0: no join，1: left join，2: right join 3: full join 4: 正常inner join
     ArrayList<Table> my_tables = new ArrayList<>();
     try {
@@ -207,8 +208,7 @@ public class Database {
     }
   }
   // todo 这里还需要再看看
-  public QueryResult select(
-      String[] columnsProjected, QueryTable the_table, boolean distinct) {
+  public QueryResult select(String[] columnsProjected, QueryTable the_table, boolean distinct) {
     try {
       lock.readLock().lock();
       QueryResult query_result = new QueryResult(the_table, columnsProjected, distinct);
@@ -328,6 +328,25 @@ public class Database {
       return new ArrayList<>(tables.keySet());
     } finally {
       lock.readLock().unlock();
+    }
+  }
+
+  public void alter(
+      String tableName, String opType, String columnName, ColumnType columnType, int maxLen) {
+    try {
+      lock.writeLock().lock();
+      Table table = get(tableName);
+      if (opType.equals("add")) {
+        table.addColoumn(columnName, columnType, maxLen);
+        return;
+      } else if (opType.equals("drop")) {
+        table.dropColumn(columnName);
+        return;
+      }
+    } catch (RuntimeException e) {
+      throw e;
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 }

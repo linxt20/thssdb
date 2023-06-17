@@ -25,7 +25,8 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
   /** 长度=每个table，分别代表每个table要出来join的列 */
   private LinkedList<Row> mRowsToBeJoined; // 用于存放每个table要join的row
 
-  public MultiQueryTable(ArrayList<Table> tables, Logic joinLogic, int joinType, Logic logicSelect) {
+  public MultiQueryTable(
+      ArrayList<Table> tables, Logic joinLogic, int joinType, Logic logicSelect) {
     super();
     this.mTables = tables;
     this.mIterators = new ArrayList<>();
@@ -34,31 +35,35 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
     this.mColumns = new ArrayList<>();
     this.mType = joinType;
     this.mLogicSelect = logicSelect;
-    String whereTableName ="";
-//    if(mLogicSelect != null){
-//      if(mLogicSelect.mTerminal){
-//        System.out.println("mLogicSelect.mTerminal: " + mLogicSelect.mTerminal);
-//        System.out.println("mLogicSelect.mCondition.mLeft.mType: " + mLogicSelect.mCondition.mLeft.mType.toString());
-//        System.out.println("mLogicSelect.mCondition.mLeft.mValue: " + mLogicSelect.mCondition.mLeft.mValue.toString());
-//      }
-//    }
-    if(mLogicSelect != null && mLogicSelect.mTerminal && mLogicSelect.mCondition.mLeft.mType == ComparerType.COLUMN){
-      if(mLogicSelect.mCondition.mRight.mType != ComparerType.COLUMN){
-        whereTableName = ((String)(mLogicSelect.mCondition.mLeft.mValue)).split("\\.")[0];
-        //System.out.println("whereTableName: " + whereTableName);
+    String whereTableName = "";
+    //    if(mLogicSelect != null){
+    //      if(mLogicSelect.mTerminal){
+    //        System.out.println("mLogicSelect.mTerminal: " + mLogicSelect.mTerminal);
+    //        System.out.println("mLogicSelect.mCondition.mLeft.mType: " +
+    // mLogicSelect.mCondition.mLeft.mType.toString());
+    //        System.out.println("mLogicSelect.mCondition.mLeft.mValue: " +
+    // mLogicSelect.mCondition.mLeft.mValue.toString());
+    //      }
+    //    }
+    if (mLogicSelect != null
+        && mLogicSelect.mTerminal
+        && mLogicSelect.mCondition.mLeft.mType == ComparerType.COLUMN) {
+      if (mLogicSelect.mCondition.mRight.mType != ComparerType.COLUMN) {
+        whereTableName = ((String) (mLogicSelect.mCondition.mLeft.mValue)).split("\\.")[0];
+        // System.out.println("whereTableName: " + whereTableName);
       }
     }
     for (Table t : tables) {
-      if(whereTableName.equals(t.tableName) && mLogicSelect.mCondition.mType == ConditionType.EQ){
-        String columnName = ((String)(mLogicSelect.mCondition.mLeft.mValue)).split("\\.")[1];
+      if (whereTableName.equals(t.tableName) && mLogicSelect.mCondition.mType == ConditionType.EQ) {
+        String columnName = ((String) (mLogicSelect.mCondition.mLeft.mValue)).split("\\.")[1];
         Comparable rightValue = mLogicSelect.mCondition.mRight.mValue;
 
-        //System.out.println("columnName: " + columnName + " rightValue: " + rightValue.toString());
+        // System.out.println("columnName: " + columnName + " rightValue: " +
+        // rightValue.toString());
         View view = new View(t, columnName, rightValue);
         this.mColumns.addAll(view.columns);
         this.mIterators.add(view.iterator());
-      }
-      else{
+      } else {
         this.mColumns.addAll(t.columns);
         this.mIterators.add(t.iterator());
       }

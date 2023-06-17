@@ -13,6 +13,7 @@ import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLParser;
+import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Global;
 import cn.edu.thssdb.utils.StatusUtil;
 
@@ -67,7 +68,8 @@ public class ServiceRuntime {
         } else {
           return new ExecuteStatementResp(StatusUtil.fail("Database does not exist."), false);
         }
-        //return new ExecuteStatementResp(StatusUtil.fail("Drop database is not supported."), false);
+        // return new ExecuteStatementResp(StatusUtil.fail("Drop database is not supported."),
+        // false);
       case USE_DB:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         UseDatabasePlan useDatabasePlan = (UseDatabasePlan) plan;
@@ -134,19 +136,24 @@ public class ServiceRuntime {
               return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
             }
             queryTable =
-                Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0), selectPlan.getWhereLogic());
+                Manager.getInstance()
+                    .getCurrentDB()
+                    .BuildSingleQueryTable(tableNames.get(0), selectPlan.getWhereLogic());
           }
-          // 如果是复合表，需要读取join逻辑和类型  0: no join，1: left join，2: right join 3: full join 4: 正常inner join
+          // 如果是复合表，需要读取join逻辑和类型  0: no join，1: left join，2: right join 3: full join 4: 正常inner
+          // join
           else {
             queryTable =
-                Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logic, joinType, selectPlan.getWhereLogic());
+                Manager.getInstance()
+                    .getCurrentDB()
+                    .BuildJointQueryTable(tableNames, logic, joinType, selectPlan.getWhereLogic());
           }
 
           ExecuteStatementResp resp =
               new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
               Manager.getInstance().getCurrentDB().select(columnsName, queryTable, distinct);
-          if(result == null || result.mResultList.size() == 0){
+          if (result == null || result.mResultList.size() == 0) {
             resp.columnsList = new ArrayList<>();
             resp.rowList = new ArrayList<>();
           }
@@ -240,6 +247,38 @@ public class ServiceRuntime {
       case AUTO_COMMIT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         return new ExecuteStatementResp(StatusUtil.success("Auto commit successfully."), false);
+      case ALTER_TABLE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        AlterTablePlan alterTablePlan = (AlterTablePlan) plan;
+        String alter_table_name = alterTablePlan.getTableName();
+        String alter_column_name = alterTablePlan.getColumnName();
+        String alter_operation_type = alterTablePlan.getOpType();
+        ColumnType alter_column_type = null;
+        int max_length = -1;
+        // 准备相关参数
+        if (alter_operation_type.equals("add")) {
+          alter_column_type = alterTablePlan.getColumnType();
+          max_length = alterTablePlan.getMaxLength();
+        } else if (alter_operation_type.equals("drop")) {
+          // do nothing
+        } else {
+          return new ExecuteStatementResp(StatusUtil.fail("wrong alter operation type"), false);
+        }
+
+        try {
+          Manager.getInstance()
+              .getCurrentDB()
+              .alter(
+                  alter_table_name,
+                  alter_operation_type,
+                  alter_column_name,
+                  alter_column_type,
+                  max_length);
+        } catch (Exception e) {
+          System.out.println(e.getMessage());
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+        }
+        return new ExecuteStatementResp(StatusUtil.success("Alter table successfully."), false);
 
       default:
     }

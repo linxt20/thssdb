@@ -22,7 +22,6 @@ public abstract class QueryTable implements Iterator<Row> {
     this.isFirst = true;
   }
 
-
   /** 描述：判断是否还有元素 参数：无 返回：无 */
   @Override
   public boolean hasNext() {

@@ -247,11 +247,11 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     String column_name = ctx.columnName().getText().toLowerCase();
     Comparer value = visit_expression(ctx.expression());
     if (ctx.K_WHERE() == null) {
-      //transaction_wait_write(table_name);
+      // transaction_wait_write(table_name);
       return new UpdatePlan(table_name, column_name, value, null);
     }
     Logic logic = visitMultiple_condition(ctx.multipleCondition());
-    //transaction_wait_write(table_name);
+    // transaction_wait_write(table_name);
     return new UpdatePlan(table_name, column_name, value, logic);
   }
 
@@ -365,7 +365,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       else {
         if (ctx.tableQuery(0).K_LEFT().size() > 0) joinType = 1;
         else if (ctx.tableQuery(0).K_RIGHT().size() > 0) joinType = 2;
-        else if(ctx.tableQuery(0).K_FULL().size() > 0) joinType = 3;
+        else if (ctx.tableQuery(0).K_FULL().size() > 0) joinType = 3;
         else joinType = 4;
         logic = visitMultiple_condition(ctx.tableQuery(0).multipleCondition());
         for (SQLParser.TableNameContext subCtx : ctx.tableQuery(0).tableName()) {
@@ -378,12 +378,11 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     // 建立逻辑，获得结果
     if (ctx.K_WHERE() != null) {
       whereLogic = visitMultiple_condition(ctx.multipleCondition());
-      //transaction_wait_read(table_names);
+      // transaction_wait_read(table_names);
       return new SelectPlan(table_names, columnsSelected, logic, whereLogic, distinct, joinType);
-    }
-    else{
-        //transaction_wait_read(table_names);
-        return new SelectPlan(table_names, columnsSelected, logic, distinct, joinType);
+    } else {
+      // transaction_wait_read(table_names);
+      return new SelectPlan(table_names, columnsSelected, logic, distinct, joinType);
     }
   }
 
@@ -447,7 +446,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     }
     // 应受隔离级别限制，暂时不实现
     System.out.println("[Debug] valueEntry" + ctx.valueEntry().toString());
-    //transaction_wait_write(table_name);
+    // transaction_wait_write(table_name);
     return new InsertPlan(table_name, column_names, ctx.valueEntry());
   }
 
@@ -558,15 +557,32 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     String table_name = ctx.tableName().getText().toLowerCase();
     if (ctx.K_WHERE() == null) {
       try {
-        //transaction_wait_write(table_name);
+        // transaction_wait_write(table_name);
         return new DeletePlan(table_name, null);
       } catch (Exception e) {
         System.out.println(e.getMessage());
       }
     }
     Logic logic = visitMultiple_condition(ctx.multipleCondition());
-    //transaction_wait_write(table_name);
+    // transaction_wait_write(table_name);
     return new DeletePlan(table_name, logic);
   }
+
   // TODO: parser to more logical plan
+  @Override
+  public LogicalPlan visitAlterTableStmt(SQLParser.AlterTableStmtContext ctx) {
+    String table_name = ctx.tableName().getText().toLowerCase();
+    if (ctx.K_ADD() != null) {
+      String column_name = ctx.columnName().getText().toLowerCase();
+      Pair<ColumnType, Integer> type = visitType_Name(ctx.typeName());
+      ColumnType columnType = type.getKey();
+      int maxLength = type.getValue(); // 这里的maxLength对于int，long，float，double都是-1，只有string是最大长度
+      return new AlterTablePlan(table_name, column_name, "add", columnType, maxLength);
+    } else if (ctx.K_DROP() != null) {
+      String column_name = ctx.columnName().getText().toLowerCase();
+      return new AlterTablePlan(table_name, column_name, "drop", null, -1);
+    }
+    return null;
+  }
+
 }

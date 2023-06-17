@@ -17,7 +17,7 @@ public class SingleQueryTable extends QueryTable implements Iterator<Row> {
   private Iterator<Row> mIterator;
   Logic mLogicSelect; // 选择逻辑
 
-  public SingleQueryTable(Table table, Logic logicSelect){
+  public SingleQueryTable(Table table, Logic logicSelect) {
     super();
     this.mTable = table;
     this.mIterator = table.iterator();

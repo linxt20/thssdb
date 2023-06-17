@@ -30,11 +30,7 @@ public class SelectPlan extends LogicalPlan {
   }
 
   public SelectPlan(
-          ArrayList<String> tableNames,
-          String[] columns,
-          Logic logic,
-          Boolean distinct,
-          int joinType) {
+      ArrayList<String> tableNames, String[] columns, Logic logic, Boolean distinct, int joinType) {
     super(LogicalPlanType.SELECT);
     this.tableNames = tableNames;
     this.columns = columns;
