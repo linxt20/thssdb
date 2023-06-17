@@ -152,11 +152,11 @@ public class Table implements Iterable<Row> {
   }
 
   // getRow函数根据主键的值获取行数据
-  public Row getRow(Entry primary_emrty) {
+  public Row getRow(Entry primary_entry) {
     Row row;
     try {
       lock.readLock().lock();
-      row = cache.getRow(primary_emrty, primaryIndex);
+      row = cache.getRow(primary_entry, primaryIndex);
     } catch (KeyNotExistException e) {
       throw e;
     } finally {

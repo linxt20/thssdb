@@ -1,5 +1,6 @@
 package cn.edu.thssdb.query;
 
+import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.schema.View;
@@ -17,9 +18,8 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
   private ArrayList<Iterator<Row>> mIterators; // 這裡是每個table的iterator
   private ArrayList<Table> mTables;
   Logic mLogicSelect; // 选择逻辑
-
+  Boolean retain = true;
   private int mType; // 0: no join，1: left join，2: right join 3: full join 4: 正常inner join
-  private int whereIndex = -1; // where条件的列的index
   private Logic mLogicJoin; // 這裡是join的邏輯
 
   /** 长度=每个table，分别代表每个table要出来join的列 */
@@ -68,9 +68,22 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
         this.mIterators.add(t.iterator());
       }
     }
+    if(mType == 2){
+      // reverse mColumns and mIterators
+        ArrayList<Column> tempColumns = new ArrayList<>();
+        ArrayList<Iterator<Row>> tempIterators = new ArrayList<>();
+        for(int i = mColumns.size() - 1; i >= 0; i--){
+          tempColumns.add(mColumns.get(i));
+        }
+        for(int i = mIterators.size() - 1; i >= 0; i--){
+          tempIterators.add(mIterators.get(i));
+        }
+        mColumns = tempColumns;
+        mIterators = tempIterators;
+    }
   }
 
-  /** 描述：返回元数据信息 参数：无 返回：元数据信息 */
+  // 返回元数据信息
   @Override
   public ArrayList<MetaInfo> GenerateMetaInfo() {
     ArrayList<MetaInfo> the_meta = new ArrayList<>();
@@ -80,7 +93,7 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
     return the_meta;
   }
 
-  /** 描述：找到下一个符合条件的，放到队列里 参数：无 返回：无 */
+  // 将下一个符合条件的Row放到队列里
   @Override
   public void PrepareNext() {
     while (true) {
@@ -89,7 +102,7 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
         return;
       }
       // 这里mLogicJoin是join ... on...的那个on的逻辑，mLogicSelect是where的逻辑，两个同时满足才能加入队列
-      if (mLogicJoin == null || mLogicJoin.GetResult(the_row) == ResultType.TRUE) {
+      if (mLogicJoin == null || mLogicJoin.GetResult(the_row) == ResultType.TRUE || retain) {
         if (mLogicSelect == null || mLogicSelect.GetResult(the_row) == ResultType.TRUE) {
           mQueue.add(the_row);
           return;
@@ -98,26 +111,39 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
     }
   }
 
-  /** 描述：将下一组row连接成一个完整的row，用于判断 参数：无 返回：无 */
+  // 将下一组row连接成一个完整的row
   private QueryRow JoinRows() {
+    retain = false;
     if (mRowsToBeJoined.isEmpty()) {
       // 遍历每个table的迭代器，将每个table的第一个row放入mRowsToBeJoined
       int i = 0;
       for (Iterator<Row> iter : mIterators) {
         if (!iter.hasNext()) {
-          return null;
+          if(((mType == 1 || mType == 2) && i == 1) || mType == 3){
+            // push一个每一个entry都为null的row
+            mRowsToBeJoined.push(new Row(mTables.get(i).columns.size()));
+          } else{
+            return null;
+          }
         }
-        mRowsToBeJoined.push(iter.next());
+        else{
+          mRowsToBeJoined.push(iter.next());
+        }
         i++;
       }
       return new QueryRow(mRowsToBeJoined, mTables);
     } else {
+      Boolean needNull = false;
       int index;
       for (index = mIterators.size() - 1; index >= 0; index--) {
         // 类似加法进位一样的机制：一直重新设置iterator，类似进位，直到有一个iterator有能进位的为止
         mRowsToBeJoined.pop();
         if (!mIterators.get(index).hasNext()) {
-          mIterators.set(index, mTables.get(index).iterator());
+          if(((mType == 1 || mType == 2)&& index == 1) || mType == 3){
+            needNull = true;
+          } else{
+            mIterators.set(index, mTables.get(index).iterator());
+          }
         } else {
           break;
         }
@@ -127,8 +153,18 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
       }
       // 再补回去
       for (int i = index; i < mIterators.size(); i++) {
-        if (!mIterators.get(i).hasNext()) throw new RuntimeException("Iterator should have next");
-        mRowsToBeJoined.push(mIterators.get(i).next());
+        if (!mIterators.get(i).hasNext()) {
+          if(needNull){
+            // push一个每一个entry都为null的row
+            mRowsToBeJoined.push(new Row(mTables.get(i).columns.size()));
+            retain = true;
+          }
+          else
+            throw new RuntimeException("Iterator should have next");
+        }
+        else{
+          mRowsToBeJoined.push(mIterators.get(i).next());
+        }
       }
       return new QueryRow(mRowsToBeJoined, mTables);
     }

@@ -21,6 +21,14 @@ public class Row implements Serializable {
     position = 0;
   }
 
+  // 这里是为了外连接专门构造一个所以entries都为null的Row
+  public Row(int count){
+    this.entries = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      entries.add(new Entry(null));
+    }
+  }
+
   public ArrayList<Entry> getEntries() {
     return entries;
   }
