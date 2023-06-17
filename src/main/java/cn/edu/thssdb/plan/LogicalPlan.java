@@ -29,6 +29,7 @@ public abstract class LogicalPlan {
     BEGIN_TRANSACTION,
     COMMIT,
     AUTO_BEGIN_TRANSACTION,
-    AUTO_COMMIT
+    AUTO_COMMIT,
+    ALTER_TABLE,
   }
 }

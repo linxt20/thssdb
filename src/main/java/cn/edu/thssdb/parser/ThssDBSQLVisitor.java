@@ -133,6 +133,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   @Override
   public LogicalPlan visitAutoCommitStmt(SQLParser.AutoCommitStmtContext ctx) {
+    System.out.println("haotamaxiangsi");
     try {
       if (Manager.getInstance().transaction_sessions.contains(sessionId)) {
         Database the_database = Manager.getInstance().getCurrentDB();
@@ -144,6 +145,8 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           the_table.quit_tran();
         }
         table_x_list.clear();
+        System.out.println("session:" + sessionId );
+        System.out.println("x_lock_dict: " + Manager.getInstance().x_lock_dict.toString());
         Manager.getInstance().x_lock_dict.put(sessionId, table_x_list);
 
         if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
@@ -203,7 +206,6 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   @Override
   public LogicalPlan visitCreateTableStmt(SQLParser.CreateTableStmtContext ctx) {
-    // TODO 需要修改
     String name = ctx.tableName().getText();
     int n = ctx.columnDef().size();
     Column[] columns = new Column[n];
@@ -240,22 +242,26 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     return new CreateTablePlan(name, columns);
   }
 
-  /** 描述：处理更新元素 */
   public LogicalPlan visitUpdateStmt(SQLParser.UpdateStmtContext ctx) {
     System.out.println("visitUpdateStmt");
     String table_name = ctx.tableName().getText().toLowerCase();
     String column_name = ctx.columnName().getText().toLowerCase();
     Comparer value = visit_expression(ctx.expression());
     if (ctx.K_WHERE() == null) {
-      transaction_wait_write(table_name);
-      return new UpdatePlan(table_name, column_name, value, null);
+      try{
+        transaction_wait_write(table_name);
+        return new UpdatePlan(table_name, column_name, value, null);
+      } catch (Exception e) {
+        System.out.println(e.getMessage());
+        throw new RuntimeException(e.getMessage());
+      }
     }
     Logic logic = visitMultiple_condition(ctx.multipleCondition());
     transaction_wait_write(table_name);
     return new UpdatePlan(table_name, column_name, value, logic);
   }
 
-  /** 描述：本应该是得到算术表达式，但是因为没有实现算术表达式，所以直接返回数值 */
+  // 处理算术表达式
   public Comparer visit_expression(SQLParser.ExpressionContext ctx) {
     if (ctx.comparer() != null) {
       if (ctx.comparer().columnFullName() != null) {
@@ -277,7 +283,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     } else return null;
   }
 
-  /** 描述：获取单一数值的类型 */
+  // 获得数值类型
   public LiteralType visitLiteral_value(SQLParser.LiteralValueContext ctx) {
     if (ctx.NUMERIC_LITERAL() != null) {
       return LiteralType.NUMBER;
@@ -291,7 +297,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     return null;
   }
 
-  /** 描述：处理逻辑建立 */
+  // 处理判断条件
   public Condition visit_Condition(SQLParser.ConditionContext ctx) {
     Comparer left = visit_expression(ctx.expression(0));
     Comparer right = visit_expression(ctx.expression(1));
@@ -312,11 +318,9 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     return new Condition(left, right, type);
   }
 
-  /** 描述：处理复合逻辑 */
+  // 处理复合判断条件
   public Logic visitMultiple_condition(SQLParser.MultipleConditionContext ctx) {
     // 单一条件
-    Object a = ctx.multipleCondition(0);
-    Object b = ctx.AND();
     if (ctx.condition() != null) return new Logic(visit_Condition(ctx.condition()));
 
     // 复合逻辑
@@ -332,7 +336,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
         logic_type);
   }
 
-  /** 描述：处理查询元素 */
+
   @Override
   public LogicalPlan visitSelectStmt(SQLParser.SelectStmtContext ctx) {
     System.out.println("visitSelectStmt");
@@ -357,14 +361,19 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       throw new RuntimeException("Error: no selected table");
     }
     ArrayList<String> table_names = new ArrayList<>();
-    Logic logicForJoin = null;
+    Logic logic = null, whereLogic = null;
+    int joinType = 0; // 0: no join，1: left join，2: right join 3: full join 4: 正常inner join
     try {
       if (ctx.tableQuery(0).K_JOIN().size() == 0) {
         table_names.add(ctx.tableQuery(0).tableName(0).getText().toLowerCase());
       }
       // 如果是复合表，需要读取join逻辑
       else {
-        logicForJoin = visitMultiple_condition(ctx.tableQuery(0).multipleCondition());
+        if (ctx.tableQuery(0).K_LEFT().size() > 0) joinType = 1;
+        else if (ctx.tableQuery(0).K_RIGHT().size() > 0) joinType = 2;
+        else if (ctx.tableQuery(0).K_FULL().size() > 0) joinType = 3;
+        else joinType = 4;
+        logic = visitMultiple_condition(ctx.tableQuery(0).multipleCondition());
         for (SQLParser.TableNameContext subCtx : ctx.tableQuery(0).tableName()) {
           table_names.add(subCtx.getText().toLowerCase());
         }
@@ -373,11 +382,14 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
       throw new RuntimeException("Error: no selected table");
     }
     // 建立逻辑，获得结果
-    Logic logic = null;
-    if (ctx.K_WHERE() != null) logic = visitMultiple_condition(ctx.multipleCondition());
-
-    transaction_wait_read(table_names);
-    return new SelectPlan(table_names, columnsSelected, logicForJoin, logic, distinct);
+    if (ctx.K_WHERE() != null) {
+      whereLogic = visitMultiple_condition(ctx.multipleCondition());
+       transaction_wait_read(table_names);
+      return new SelectPlan(table_names, columnsSelected, logic, whereLogic, distinct, joinType);
+    } else {
+       transaction_wait_read(table_names);
+      return new SelectPlan(table_names, columnsSelected, logic, distinct, joinType);
+    }
   }
 
   // 描述：读取列定义中的信息---名字，类型，是否主键，是否非空，最大长度
@@ -402,7 +414,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     return new Column(name, columnType, primary, not_null, maxLength);
   }
 
-  /** 描述：处理创建列时的type，max length */
+  // 描述：处理创建列时的type，max length
   public Pair<ColumnType, Integer> visitType_Name(SQLParser.TypeNameContext ctx) {
     if (ctx.T_INT() != null) {
       return new Pair<>(ColumnType.INT, -1);
@@ -445,8 +457,14 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
   }
 
   public void transaction_wait_read(ArrayList<String> table_names) {
-    System.out.println("[Debug] transaction_wait_read: " + sessionId + " " + table_names.get(0) + " "
-            + Manager.getInstance().session_queue.toString() + " "
+    System.out.println(
+        "[Debug] transaction_wait_read: "
+            + sessionId
+            + " "
+            + table_names.get(0)
+            + " "
+            + Manager.getInstance().session_queue.toString()
+            + " "
             + Manager.getInstance().getCurrentDB().get(table_names.get(0)).getTplock()
             + Manager.getInstance().getCurrentDB().get(table_names.get(0)).getX_lock_list()
             + Manager.getInstance().getCurrentDB().get(table_names.get(0)).getS_lock_list());
@@ -509,7 +527,7 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           }
         }
         try {
-          Thread.sleep(500); // 休眠3秒
+          Thread.sleep(10); // 休眠3秒
         } catch (Exception e) {
           System.out.println("Got an exception!");
         }
@@ -519,14 +537,31 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
 
   public void transaction_wait_write(String table_name) {
     // 输出当前当前事务号以及需要加锁的表，以及当前的组赛队列，以及表的锁状态
-    System.out.println("[Debug] transaction_wait_write: " + sessionId + " " + table_name + " "
-        + Manager.getInstance().session_queue.toString() + " "
-        + Manager.getInstance().getCurrentDB().get(table_name).getTplock()
-        + Manager.getInstance().getCurrentDB().get(table_name).getX_lock_list()
-        + Manager.getInstance().getCurrentDB().get(table_name).getS_lock_list());
+    System.out.println(
+        "[Debug] transaction_wait_write: "
+            + sessionId
+            + " "
+            + table_name
+            + " "
+            + Manager.getInstance().session_queue.toString()
+            + " "
+            + Manager.getInstance().getCurrentDB().get(table_name).getTplock()
+            + Manager.getInstance().getCurrentDB().get(table_name).getX_lock_list()
+            + Manager.getInstance().getCurrentDB().get(table_name).getS_lock_list());
     if (Manager.getInstance().transaction_sessions.contains(sessionId)) {
       Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
       while (true) {
+        System.out.println(
+                "[Debug] transaction_wait_write: "
+                        + sessionId
+                        + " "
+                        + table_name
+                        + " "
+                        + Manager.getInstance().session_queue.toString()
+                        + " "
+                        + Manager.getInstance().getCurrentDB().get(table_name).getTplock()
+                        + Manager.getInstance().getCurrentDB().get(table_name).getX_lock_list()
+                        + Manager.getInstance().getCurrentDB().get(table_name).getS_lock_list());
         if (!Manager.getInstance().session_queue.contains(sessionId)) // 新加入一个session
         {
           int get_lock = the_table.get_x_lock(sessionId);
@@ -537,7 +572,10 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
               if (tmp == null) {
                 tmp = new ArrayList<>();
               }
-              tmp.add(table_name);
+              if(!tmp.contains(table_name))
+              {
+                tmp.add(table_name);
+              }
               Manager.getInstance().x_lock_dict.put(sessionId, tmp);
             }
             break;
@@ -565,7 +603,9 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
           }
         }
         try {
-          Thread.sleep(500); // 休眠3秒
+          // sleep random0-1000ms
+          Thread.sleep(1000);
+          System.out.println("sleep...");
         } catch (Exception e) {
           System.out.println("Got an exception!");
         }
@@ -582,11 +622,28 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
         return new DeletePlan(table_name, null);
       } catch (Exception e) {
         System.out.println(e.getMessage());
+        throw e;
       }
     }
     Logic logic = visitMultiple_condition(ctx.multipleCondition());
     transaction_wait_write(table_name);
     return new DeletePlan(table_name, logic);
   }
+
   // TODO: parser to more logical plan
+  @Override
+  public LogicalPlan visitAlterTableStmt(SQLParser.AlterTableStmtContext ctx) {
+    String table_name = ctx.tableName().getText().toLowerCase();
+    if (ctx.K_ADD() != null) {
+      String column_name = ctx.columnName().getText().toLowerCase();
+      Pair<ColumnType, Integer> type = visitType_Name(ctx.typeName());
+      ColumnType columnType = type.getKey();
+      int maxLength = type.getValue(); // 这里的maxLength对于int，long，float，double都是-1，只有string是最大长度
+      return new AlterTablePlan(table_name, column_name, "add", columnType, maxLength);
+    } else if (ctx.K_DROP() != null) {
+      String column_name = ctx.columnName().getText().toLowerCase();
+      return new AlterTablePlan(table_name, column_name, "drop", null, -1);
+    }
+    return null;
+  }
 }

@@ -89,7 +89,8 @@ public class Database {
     }
     try {
       lock.writeLock().lock();
-      if (tables.containsKey(name)) throw new RuntimeException("Database create table error: table already exists");
+      if (tables.containsKey(name))
+        throw new RuntimeException("Database create table error: table already exists");
       Table new_table = new Table(this.name, name, columns);
       tables.put(name, new_table);
       persist_table(new_table); // 这里修改为只写入新建的table的元数据，不用重复写入所有table的元数据
@@ -177,11 +178,11 @@ public class Database {
   }
 
   /** 描述：建立单一querytable 参数：table name 返回：querytable */
-  public QueryTable BuildSingleQueryTable(String table_name) {
+  public QueryTable BuildSingleQueryTable(String table_name, Logic selectLogic) {
     try {
       lock.readLock().lock();
       if (tables.containsKey(table_name)) {
-        return new SingleQueryTable(tables.get(table_name));
+        return new SingleQueryTable(tables.get(table_name), selectLogic);
       }
     } finally {
       lock.readLock().unlock();
@@ -189,7 +190,9 @@ public class Database {
     throw new KeyNotExistException();
   }
   /** 描述：建立复合querytable 参数：table names，join逻辑 返回：querytable */
-  public QueryTable BuildJointQueryTable(ArrayList<String> table_names, Logic logic) {
+  public QueryTable BuildJointQueryTable(
+      ArrayList<String> table_names, Logic logic, int joinType, Logic selectLogic) {
+    // 0: no join，1: left join，2: right join 3: full join 4: 正常inner join
     ArrayList<Table> my_tables = new ArrayList<>();
     try {
       lock.readLock().lock();
@@ -197,19 +200,17 @@ public class Database {
         if (!tables.containsKey(table_name)) throw new KeyNotExistException();
         my_tables.add(tables.get(table_name));
       }
-      return new MultiQueryTable(my_tables, logic);
+      return new MultiQueryTable(my_tables, logic, joinType, selectLogic);
     } catch (Exception e) {
-      throw new KeyNotExistException();
+      throw e;
     } finally {
       lock.readLock().unlock();
     }
   }
   // todo 这里还需要再看看
-  public QueryResult select(
-      String[] columnsProjected, QueryTable the_table, Logic select_logic, boolean distinct) {
+  public QueryResult select(String[] columnsProjected, QueryTable the_table, boolean distinct) {
     try {
       lock.readLock().lock();
-      the_table.SetLogicSelect(select_logic);
       QueryResult query_result = new QueryResult(the_table, columnsProjected, distinct);
       query_result.GenerateQueryRecords();
       return query_result;
@@ -327,6 +328,25 @@ public class Database {
       return new ArrayList<>(tables.keySet());
     } finally {
       lock.readLock().unlock();
+    }
+  }
+
+  public void alter(
+      String tableName, String opType, String columnName, ColumnType columnType, int maxLen) {
+    try {
+      lock.writeLock().lock();
+      Table table = get(tableName);
+      if (opType.equals("add")) {
+        table.addColoumn(columnName, columnType, maxLen);
+        return;
+      } else if (opType.equals("drop")) {
+        table.dropColumn(columnName);
+        return;
+      }
+    } catch (RuntimeException e) {
+      throw e;
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 }

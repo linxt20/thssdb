@@ -11,7 +11,8 @@ sqlStmtList :
     ';'* sqlStmt ( ';'+ sqlStmt )* ';'* ;
 
 sqlStmt :
-    createTableStmt
+    alterTableStmt
+    | createTableStmt
     | createDbStmt
     | createUserStmt
     | dropDbStmt
@@ -34,6 +35,10 @@ sqlStmt :
     | autoBeginTransactionStmt
     | autoCommitStmt
     | commitStmt ;
+
+alterTableStmt:
+    K_ALTER K_TABLE tableName
+        (K_ADD columnName typeName | K_DROP K_COLUMN columnName | K_ALTER K_COLUMN columnName typeName) ;
 
 beginTransactionStmt :
     K_BEGIN K_TRANSACTION;
@@ -156,7 +161,8 @@ resultColumn
 
 tableQuery :
     tableName
-    | tableName ( K_JOIN tableName )+ K_ON multipleCondition ;
+    | tableName (( K_INNER )? K_JOIN tableName )+ K_ON multipleCondition
+    | tableName (( K_LEFT | K_RIGHT | K_FULL ) ( K_OUTER )? K_JOIN tableName)+ K_ON multipleCondition;
 
 authLevel :
     K_SELECT | K_INSERT | K_UPDATE | K_DELETE | K_DROP ;
@@ -227,6 +233,11 @@ K_IDENTIFIED : I D E N T I F I E D;
 K_INSERT : I N S E R T;
 K_INTO : I N T O;
 K_JOIN : J O I N;
+K_LEFT : L E F T;
+K_RIGHT : R I G H T;
+K_FULL : F U L L;
+K_OUTER : O U T E R;
+K_INNER : I N N E R;
 K_KEY : K E Y;
 K_NOT : N O T;
 K_NULL : N U L L;
@@ -250,6 +261,7 @@ K_BEGIN : B E G I N;
 K_TRANSACTION : T R A N S A C T I O N;
 K_AUTOBEGIN : A U T O B E G I N;
 K_AUTOCOMMIT : A U T O C O M M I T;
+K_ALTER : A L T E R;
 
 IDENTIFIER :
     [a-zA-Z_] [a-zA-Z_0-9]* ;

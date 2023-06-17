@@ -10,11 +10,12 @@ import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.rpc.thrift.ExecuteStatementResp;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Manager;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.schema.Row;
+import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.sql.SQLParser;
-import cn.edu.thssdb.utils.StatusUtil;
+import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Global;
+import cn.edu.thssdb.utils.StatusUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ public class ServiceRuntime {
     statement = statement.trim();
     String cmd = statement.split("\\s+")[0];
     LogicalPlan plan;
+    Boolean autoCommit = false;
     if ((cmd.toLowerCase().equals("insert")
             || cmd.toLowerCase().equals("update")
             || cmd.toLowerCase().equals("delete")
@@ -32,7 +34,8 @@ public class ServiceRuntime {
         && !Manager.getInstance().transaction_sessions.contains(sessionId)) {
       LogicalGenerator.generate("autobegin transaction", sessionId);
       plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
-      LogicalGenerator.generate("autocommit", sessionId);
+      System.out.println("=========================" + Manager.getInstance().toString());
+      autoCommit = true;
     } else {
       plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
     }
@@ -63,6 +66,8 @@ public class ServiceRuntime {
         } else {
           return new ExecuteStatementResp(StatusUtil.fail("Database does not exist."), false);
         }
+        // return new ExecuteStatementResp(StatusUtil.fail("Drop database is not supported."),
+        // false);
       case USE_DB:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         UseDatabasePlan useDatabasePlan = (UseDatabasePlan) plan;
@@ -120,21 +125,28 @@ public class ServiceRuntime {
           String[] columnsName = selectPlan.getColumns();
           ArrayList<String> tableNames = selectPlan.getTableNames();
           QueryTable queryTable = null; // = selectPlan.getQueryTable();
-          Logic logicForJoin = selectPlan.getLogicForJoin();
+          int joinType = selectPlan.getJoinType();
           Logic logic = selectPlan.getLogic();
           Boolean distinct = selectPlan.getDistinct();
           // 如果没有join，即为单一表查询
-          if (logicForJoin == null) {
+          if (joinType == 0) {
             if (tableNames.size() != 1) {
+              if(autoCommit)
+                LogicalGenerator.generate("autocommit", sessionId);
               return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
             }
             queryTable =
-                Manager.getInstance().getCurrentDB().BuildSingleQueryTable(tableNames.get(0));
+                Manager.getInstance()
+                    .getCurrentDB()
+                    .BuildSingleQueryTable(tableNames.get(0), selectPlan.getWhereLogic());
           }
-          // 如果是复合表，需要读取join逻辑
+          // 如果是复合表，需要读取join逻辑和类型  0: no join，1: left join，2: right join 3: full join 4: 正常inner
+          // join
           else {
             queryTable =
-                Manager.getInstance().getCurrentDB().BuildJointQueryTable(tableNames, logicForJoin);
+                Manager.getInstance()
+                    .getCurrentDB()
+                    .BuildJointQueryTable(tableNames, logic, joinType, selectPlan.getWhereLogic());
           }
 
           if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
@@ -142,6 +154,7 @@ public class ServiceRuntime {
             // 打印出此时的事务号，以及此时的s锁列表
             System.out.println("session id: " + sessionId);
             System.out.println("s lock list: " + table_s_list);
+            System.out.println("x lock dict: " + Manager.getInstance().x_lock_dict.get(sessionId));
             for (String table_name : table_s_list) {
               Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
               the_table.free_s_lock(sessionId);
@@ -150,9 +163,14 @@ public class ServiceRuntime {
             table_s_list.clear();
             Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
           }
-          ExecuteStatementResp resp =  new ExecuteStatementResp(StatusUtil.success("select result:"), true);
+          ExecuteStatementResp resp =
+              new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
-              Manager.getInstance().getCurrentDB().select(columnsName, queryTable, logic, distinct);
+              Manager.getInstance().getCurrentDB().select(columnsName, queryTable, distinct);
+          if (result == null || result.mResultList.size() == 0) {
+            resp.columnsList = new ArrayList<>();
+            resp.rowList = new ArrayList<>();
+          }
           for (String column_name : result.mColumnName) {
             resp.addToColumnsList(column_name);
           }
@@ -160,10 +178,14 @@ public class ServiceRuntime {
             ArrayList<String> the_result = row.toStringList();
             resp.addToRowList(the_result);
           }
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
           return resp;
         } catch (Exception e) {
           // QueryResult error_result = new QueryResult(e.toString());
           // return error_result;
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case INSERT:
@@ -181,12 +203,14 @@ public class ServiceRuntime {
           try {
             Manager.getInstance().getCurrentDB().insert(table_name, column_names, values);
           } catch (RuntimeException e) {
-            System.out.println("entered catch");
+            if(autoCommit)
+              LogicalGenerator.generate("autocommit", sessionId);
             return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
-            // System.out.println(e.getMessage());
-            // return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
           }
         }
+        System.out.println("insert over");
+        if(autoCommit)
+          LogicalGenerator.generate("autocommit", sessionId);
         return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
       case UPDATE:
         try {
@@ -203,10 +227,14 @@ public class ServiceRuntime {
                   column_name_for_update,
                   value_for_update,
                   logic_for_update);
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
         } catch (Exception e) {
           System.out.println(e.getMessage());
-            return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case DELETE:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
@@ -218,6 +246,8 @@ public class ServiceRuntime {
         } catch (Exception e) {
           System.out.println(e.getMessage());
         }
+        if(autoCommit)
+          LogicalGenerator.generate("autocommit", sessionId);
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
       case BEGIN_TRANSACTION:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
@@ -233,6 +263,38 @@ public class ServiceRuntime {
       case AUTO_COMMIT:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
         return new ExecuteStatementResp(StatusUtil.success("Auto commit successfully."), false);
+      case ALTER_TABLE:
+        System.out.println("IServiceHandler: [DEBUG] " + plan);
+        AlterTablePlan alterTablePlan = (AlterTablePlan) plan;
+        String alter_table_name = alterTablePlan.getTableName();
+        String alter_column_name = alterTablePlan.getColumnName();
+        String alter_operation_type = alterTablePlan.getOpType();
+        ColumnType alter_column_type = null;
+        int max_length = -1;
+        // 准备相关参数
+        if (alter_operation_type.equals("add")) {
+          alter_column_type = alterTablePlan.getColumnType();
+          max_length = alterTablePlan.getMaxLength();
+        } else if (alter_operation_type.equals("drop")) {
+          // do nothing
+        } else {
+          return new ExecuteStatementResp(StatusUtil.fail("wrong alter operation type"), false);
+        }
+
+        try {
+          Manager.getInstance()
+              .getCurrentDB()
+              .alter(
+                  alter_table_name,
+                  alter_operation_type,
+                  alter_column_name,
+                  alter_column_type,
+                  max_length);
+        } catch (Exception e) {
+          System.out.println(e.getMessage());
+          return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
+        }
+        return new ExecuteStatementResp(StatusUtil.success("Alter table successfully."), false);
 
       default:
     }
