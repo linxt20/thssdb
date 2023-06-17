@@ -54,6 +54,18 @@ public class Table implements Iterable<Row> {
     recover();
   }
 
+  public int getTplock() {
+    return tplock;
+  }
+
+  public ArrayList<Long> getX_lock_list() {
+    return x_lock_list;
+  }
+
+  public ArrayList<Long> getS_lock_list() {
+    return s_lock_list;
+  }
+
   public void addColoumn(String columnName, ColumnType columnType, int MaxLen) {
     Column column = new Column(columnName, columnType, 0, false, MaxLen);
     // 判断是否有重复的列名
@@ -152,11 +164,11 @@ public class Table implements Iterable<Row> {
   }
 
   // getRow函数根据主键的值获取行数据
-  public Row getRow(Entry primary_entry) {
+  public Row getRow(Entry primary_emrty) {
     Row row;
     try {
       lock.readLock().lock();
-      row = cache.getRow(primary_entry, primaryIndex);
+      row = cache.getRow(primary_emrty, primaryIndex);
     } catch (KeyNotExistException e) {
       throw e;
     } finally {
@@ -412,7 +424,7 @@ public class Table implements Iterable<Row> {
 
   //   insert函数将传入的列数据按照当前table的列顺序插入到cache中
   public void insert(String[] column_list, String[] value_list, boolean in_tran) {
-    System.out.println("insert column list");
+    // System.out.println("insert column list");
     if (column_list == null || value_list == null) return;
     int len = this.columns.size(); // 当前表的列数
     // 如果输入的value和columns个数对不上或者输入的column比表中的column还多，报错并返回 TODO 报错
@@ -454,7 +466,7 @@ public class Table implements Iterable<Row> {
       }
     }
     for (Column column : this.columns) {
-      System.out.println("index: " + column_index.get(column.getName()));
+      // System.out.println("index: " + column_index.get(column.getName()));
       Integer index = column_index.get(column.getName());
       Comparable the_entry_value = null;
       if (index != null) {

@@ -27,8 +27,6 @@ public class View implements Iterable<Row> {
         // 从oldTable中筛选出满足condition的行
         ColumnType type = column.getType();
         for (Row row : oldTable) {
-          System.out.println(
-              "row.getEntries().get(i).toString(): " + row.getEntries().get(i).toString());
           // 判断是否符合condition，符合则insert
           if (type == ColumnType.INT
               || type == ColumnType.LONG

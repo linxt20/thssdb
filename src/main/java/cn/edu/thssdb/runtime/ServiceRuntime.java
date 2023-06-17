@@ -26,18 +26,16 @@ public class ServiceRuntime {
     statement = statement.trim();
     String cmd = statement.split("\\s+")[0];
     LogicalPlan plan;
+    Boolean autoCommit = false;
     if ((cmd.toLowerCase().equals("insert")
             || cmd.toLowerCase().equals("update")
             || cmd.toLowerCase().equals("delete")
             || cmd.toLowerCase().equals("select"))
         && !Manager.getInstance().transaction_sessions.contains(sessionId)) {
       LogicalGenerator.generate("autobegin transaction", sessionId);
-      try {
-        plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
-      } catch (Exception e) {
-        return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
-      }
-      LogicalGenerator.generate("autocommit", sessionId);
+      plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
+      System.out.println("=========================" + Manager.getInstance().toString());
+      autoCommit = true;
     } else {
       plan = LogicalGenerator.generate(statement, sessionId); // 这里会调用parser解析语句
     }
@@ -133,6 +131,8 @@ public class ServiceRuntime {
           // 如果没有join，即为单一表查询
           if (joinType == 0) {
             if (tableNames.size() != 1) {
+              if(autoCommit)
+                LogicalGenerator.generate("autocommit", sessionId);
               return new ExecuteStatementResp(StatusUtil.fail("wrong table size"), false);
             }
             queryTable =
@@ -149,6 +149,20 @@ public class ServiceRuntime {
                     .BuildJointQueryTable(tableNames, logic, joinType, selectPlan.getWhereLogic());
           }
 
+          if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
+            ArrayList<String> table_s_list = Manager.getInstance().s_lock_dict.get(sessionId);
+            // 打印出此时的事务号，以及此时的s锁列表
+            System.out.println("session id: " + sessionId);
+            System.out.println("s lock list: " + table_s_list);
+            System.out.println("x lock dict: " + Manager.getInstance().x_lock_dict.get(sessionId));
+            for (String table_name : table_s_list) {
+              Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
+              the_table.free_s_lock(sessionId);
+              the_table.quit_tran();
+            }
+            table_s_list.clear();
+            Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
+          }
           ExecuteStatementResp resp =
               new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
@@ -164,20 +178,14 @@ public class ServiceRuntime {
             ArrayList<String> the_result = row.toStringList();
             resp.addToRowList(the_result);
           }
-          if (Global.DATABASE_ISOLATION_LEVEL == Global.ISOLATION_LEVEL.READ_COMMITTED) {
-            ArrayList<String> table_s_list = Manager.getInstance().s_lock_dict.get(sessionId);
-            for (String table_name : table_s_list) {
-              Table the_table = Manager.getInstance().getCurrentDB().get(table_name);
-              the_table.free_s_lock(sessionId);
-              the_table.quit_tran();
-            }
-            table_s_list.clear();
-            Manager.getInstance().s_lock_dict.put(sessionId, table_s_list);
-          }
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
           return resp;
         } catch (Exception e) {
           // QueryResult error_result = new QueryResult(e.toString());
           // return error_result;
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case INSERT:
@@ -195,12 +203,14 @@ public class ServiceRuntime {
           try {
             Manager.getInstance().getCurrentDB().insert(table_name, column_names, values);
           } catch (RuntimeException e) {
-            System.out.println("entered catch");
+            if(autoCommit)
+              LogicalGenerator.generate("autocommit", sessionId);
             return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
-            // System.out.println(e.getMessage());
-            // return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
           }
         }
+        System.out.println("insert over");
+        if(autoCommit)
+          LogicalGenerator.generate("autocommit", sessionId);
         return new ExecuteStatementResp(StatusUtil.success("Insert successfully."), false);
       case UPDATE:
         try {
@@ -217,9 +227,13 @@ public class ServiceRuntime {
                   column_name_for_update,
                   value_for_update,
                   logic_for_update);
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.success("Update successfully."), false);
         } catch (Exception e) {
           System.out.println(e.getMessage());
+          if(autoCommit)
+            LogicalGenerator.generate("autocommit", sessionId);
           return new ExecuteStatementResp(StatusUtil.fail(e.getMessage()), false);
         }
       case DELETE:
@@ -232,6 +246,8 @@ public class ServiceRuntime {
         } catch (Exception e) {
           System.out.println(e.getMessage());
         }
+        if(autoCommit)
+          LogicalGenerator.generate("autocommit", sessionId);
         return new ExecuteStatementResp(StatusUtil.success("delete successfully."), false);
       case BEGIN_TRANSACTION:
         System.out.println("IServiceHandler: [DEBUG] " + plan);
