@@ -5,7 +5,7 @@ import cn.edu.thssdb.schema.Entry;
 import java.util.ArrayList;
 
 public class Page {
-  public static final int maxSize = 2048;
+  public static final int maxSize = 4096;
   private int id; // 每个页的id
   private int size; // 页面的实际大小
   private ArrayList<Entry> entry_list; // 这是行的主键，能够唯一表示这一行

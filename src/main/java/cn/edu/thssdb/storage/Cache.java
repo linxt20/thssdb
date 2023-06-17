@@ -120,6 +120,7 @@ public class Cache {
   public void insertPage(ArrayList<Row> row_list, int primary_key) {
     addPage();
     Page temp_page = page_map.get(num);
+    page_map.remove(num);
     for (Row row : row_list) {
       ArrayList<Entry> entry_list = row.getEntries(); // 这个地方get到的是所有的键
       Entry primary_entry = entry_list.get(primary_key);
@@ -128,6 +129,7 @@ public class Cache {
       row.setPosition(num);
       index.put(primary_entry, row);
     }
+    page_map.put(num, temp_page);
   }
   // 这是将行信息插入到页面当中，先获取键值信息，然后获取页面信息，最后写入，需要修改页面的时间戳、编辑状态
   public void insertRow(ArrayList<Entry> entry_list, int primary_key, boolean in_tran) {
@@ -143,6 +145,7 @@ public class Cache {
       addPage();
       temp_page = page_map.get(num);
     }
+    page_map.remove(num);
     row.setPosition(num);
     try {
       index.put(primary_entry, row);
@@ -156,6 +159,7 @@ public class Cache {
     if (in_tran) {
       temp_page.setIn_tran(true);
     }
+    page_map.put(num, temp_page);
   }
   // 获取行，需要先检查是否是空行，空行得去内存里面找
   public Row getRow(Entry primary_entry, int primary_key) {
@@ -173,7 +177,9 @@ public class Cache {
       exchangePage_LRU(position, primary_key);
       row = index.get(primary_entry);
     } else {
-      page_map.get(position).setTime_stamp();
+      Page temp_page = page_map.get(position);
+      page_map.remove(position);
+      page_map.put(position, temp_page);
     }
     return row;
   }
@@ -182,12 +188,14 @@ public class Cache {
     Row row = getRow(entry, primary_key);
     index.remove(entry);
     Page temp_page = page_map.get(row.getPosition());
+    page_map.remove(row.getPosition());
     int length = row.toString().length();
     temp_page.Entry_list_remove(entry, length);
     temp_page.setEdited(true);
     if (in_tran) {
       temp_page.setIn_tran(true);
     }
+    page_map.put(row.getPosition(), temp_page);
   }
   // 更新行，先判断行是否在内存，然后判断主键是否被修改，修改需要判断主键冲突，然后更新行数据,最后更新页数据，需要注意页数据需要行数据才能更新，顺序不能错误
   public void updateRow(
@@ -218,6 +226,7 @@ public class Cache {
     }
     // 更新页的标记
     Page temp_page = page_map.get(row.getPosition());
+    page_map.remove(row.getPosition());
     if (isPrimaryKeyChanged) {
       temp_page.Entry_list_remove(primary_entry, length);
       temp_page.Entry_list_add(target_primary_entry, row.toString().length());
@@ -228,6 +237,7 @@ public class Cache {
     if (in_tran) {
       temp_page.setIn_tran(true);
     }
+    page_map.put(row.getPosition(), temp_page);
   }
   // 数据持久化
   public void data_persist() {

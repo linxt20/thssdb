@@ -131,6 +131,7 @@ public class Table implements Iterable<Row> {
     }
     return value;
   }
+  // 总结：如果自身有x锁，用x锁去读，未加锁；如果自身有s锁，用s锁去读，未加锁；如果自身未加锁，加s锁，加锁成功
 
   public int get_x_lock(long session) {
     int value = 0; // 返回-1代表加锁失败  返回0代表成功但未加锁  返回1代表成功加锁

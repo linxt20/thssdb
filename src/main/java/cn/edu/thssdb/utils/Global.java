@@ -7,7 +7,7 @@ public class Global {
     SERIALIZABLE
   }
 
-  public static ISOLATION_LEVEL DATABASE_ISOLATION_LEVEL = ISOLATION_LEVEL.SERIALIZABLE;
+  public static ISOLATION_LEVEL DATABASE_ISOLATION_LEVEL = ISOLATION_LEVEL.READ_COMMITTED;
   public static int fanout = 129;
 
   public static int SUCCESS_CODE = 0;
