@@ -584,5 +584,4 @@ public class ThssDBSQLVisitor extends SQLBaseVisitor<LogicalPlan> {
     }
     return null;
   }
-
 }

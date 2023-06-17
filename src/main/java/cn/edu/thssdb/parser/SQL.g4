@@ -261,6 +261,7 @@ K_BEGIN : B E G I N;
 K_TRANSACTION : T R A N S A C T I O N;
 K_AUTOBEGIN : A U T O B E G I N;
 K_AUTOCOMMIT : A U T O C O M M I T;
+K_ALTER : A L T E R;
 
 IDENTIFIER :
     [a-zA-Z_] [a-zA-Z_0-9]* ;
