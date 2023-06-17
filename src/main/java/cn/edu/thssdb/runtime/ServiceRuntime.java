@@ -146,6 +146,10 @@ public class ServiceRuntime {
               new ExecuteStatementResp(StatusUtil.success("select result:"), true);
           QueryResult result =
               Manager.getInstance().getCurrentDB().select(columnsName, queryTable, distinct);
+          if(result == null || result.mResultList.size() == 0){
+            resp.columnsList = new ArrayList<>();
+            resp.rowList = new ArrayList<>();
+          }
           for (String column_name : result.mColumnName) {
             resp.addToColumnsList(column_name);
           }

@@ -4,6 +4,7 @@ import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.schema.View;
 import cn.edu.thssdb.type.ComparerType;
+import cn.edu.thssdb.type.ConditionType;
 import cn.edu.thssdb.type.ResultType;
 
 import java.util.ArrayList;
@@ -42,16 +43,17 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
 //      }
 //    }
     if(mLogicSelect != null && mLogicSelect.mTerminal && mLogicSelect.mCondition.mLeft.mType == ComparerType.COLUMN){
-      whereTableName = ((String)(mLogicSelect.mCondition.mLeft.mValue)).split("\\.")[0];
-      System.out.println("whereTableName: " + whereTableName);
+      if(mLogicSelect.mCondition.mRight.mType != ComparerType.COLUMN){
+        whereTableName = ((String)(mLogicSelect.mCondition.mLeft.mValue)).split("\\.")[0];
+        //System.out.println("whereTableName: " + whereTableName);
+      }
     }
-    int i = 0;
     for (Table t : tables) {
-      if(whereTableName.equals(t.tableName)){
+      if(whereTableName.equals(t.tableName) && mLogicSelect.mCondition.mType == ConditionType.EQ){
         String columnName = ((String)(mLogicSelect.mCondition.mLeft.mValue)).split("\\.")[1];
         Comparable rightValue = mLogicSelect.mCondition.mRight.mValue;
 
-        System.out.println("columnName: " + columnName + " rightValue: " + rightValue.toString());
+        //System.out.println("columnName: " + columnName + " rightValue: " + rightValue.toString());
         View view = new View(t, columnName, rightValue);
         this.mColumns.addAll(view.columns);
         this.mIterators.add(view.iterator());
@@ -60,7 +62,6 @@ public class MultiQueryTable extends QueryTable implements Iterator<Row> {
         this.mColumns.addAll(t.columns);
         this.mIterators.add(t.iterator());
       }
-      i++;
     }
   }
 
